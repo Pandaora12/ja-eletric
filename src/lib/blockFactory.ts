@@ -45,5 +45,8 @@ export function createBlock(type: BlockType, overrides?: BlockOverrides): Block 
 
     case 'company-header':
       return { id, type, content: { _marker: true } };
+
+    case 'finance-summary':
+      return { id, type, content: { _marker: true } };
   }
 }

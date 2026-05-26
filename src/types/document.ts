@@ -27,4 +27,5 @@ export interface Document {
   updatedAt: number;
   savedPath?: string;
   savedAt?: number;
+  isCommercialMode?: boolean;
 }

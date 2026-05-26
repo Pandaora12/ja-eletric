@@ -37,6 +37,7 @@ interface DocumentState {
   reorderBlocks: (documentId: string, activeId: string, overId: string) => void;
 
   setSavedPath: (id: string, path: string, timestamp: number) => void;
+  toggleCommercialMode: (id: string) => void;
 
   // Selectors
   getActiveDocument: () => Document | null;
@@ -237,6 +238,19 @@ export const useDocumentStore = create<DocumentState>((set, get) => ({
       documents: {
         ...state.documents,
         [id]: { ...state.documents[id], savedPath: path, savedAt: timestamp },
+      },
+    }));
+  },
+
+  toggleCommercialMode: (id) => {
+    set((state) => ({
+      documents: {
+        ...state.documents,
+        [id]: {
+          ...state.documents[id],
+          isCommercialMode: !state.documents[id].isCommercialMode,
+          updatedAt: Date.now(),
+        },
       },
     }));
   },

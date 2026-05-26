@@ -70,10 +70,11 @@ export function SettingsModal() {
 
   return createPortal(
     <div
-      className="fixed inset-0 z-50 flex items-center justify-center bg-black/70"
+      className="fixed inset-0 z-50 flex items-center justify-center backdrop-blur-sm bg-black/70"
       onMouseDown={(e) => { if (e.target === e.currentTarget) toggleSettings(); }}
     >
-      <div className="w-full max-w-lg mx-4 bg-zinc-900 border border-zinc-800 rounded-lg shadow-2xl max-h-[92vh] flex flex-col">
+      <div className="w-full max-w-lg mx-4 bg-zinc-900 border border-zinc-800 rounded-lg shadow-2xl max-h-[92vh] flex flex-col
+        animate-[modalIn_0.2s_ease-out]">
 
         {/* Header */}
         <div className="px-6 pt-6 pb-5 border-b border-zinc-800 shrink-0">

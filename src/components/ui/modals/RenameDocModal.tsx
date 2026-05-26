@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useDocumentStore } from '../../../stores/documentStore';
 
 interface Props {
@@ -8,7 +8,9 @@ interface Props {
 
 export function RenameDocModal({ data, onClose }: Props) {
   const updateDocumentTitle = useDocumentStore((s) => s.updateDocumentTitle);
-  const [title, setTitle] = useState(data.currentTitle);
+  const [title,   setTitle]   = useState(data.currentTitle);
+  const [visible, setVisible] = useState(false);
+  useEffect(() => { requestAnimationFrame(() => setVisible(true)); }, []);
 
   const handleConfirm = () => {
     const trimmed = title.trim();
@@ -18,7 +20,7 @@ export function RenameDocModal({ data, onClose }: Props) {
   };
 
   return (
-    <div className="w-full max-w-sm mx-4 bg-zinc-900 border border-zinc-800 rounded shadow-2xl">
+    <div className={`w-full max-w-sm mx-4 bg-zinc-900 border border-zinc-800 rounded shadow-2xl transition-all duration-200 ease-out ${visible ? 'opacity-100 scale-100' : 'opacity-0 scale-95'}`}>
       {/* Header */}
       <div className="px-6 pt-6 pb-4">
         <p className="text-[11px] font-semibold uppercase tracking-widest text-zinc-500 mb-3">

@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useDocumentStore } from '../../../stores/documentStore';
 import { DOCUMENT_TYPE_LABELS, type DocumentType } from '../../../types/document';
 
@@ -18,7 +18,10 @@ export function CreateDocModal({ onClose }: Props) {
   const createDocument = useDocumentStore((s) => s.createDocument);
 
   const [selected, setSelected] = useState<DocumentType | null>(null);
-  const [title, setTitle] = useState('');
+  const [title,    setTitle]    = useState('');
+  const [visible,  setVisible]  = useState(false);
+
+  useEffect(() => { requestAnimationFrame(() => setVisible(true)); }, []);
 
   const handleSelect = (type: DocumentType) => {
     setSelected(type);
@@ -36,7 +39,7 @@ export function CreateDocModal({ onClose }: Props) {
   };
 
   return (
-    <div className="w-full max-w-lg mx-4 bg-zinc-900 border border-zinc-800 rounded-lg shadow-2xl">
+    <div className={`w-full max-w-lg mx-4 bg-zinc-900 border border-zinc-800 rounded-lg shadow-2xl transition-all duration-200 ease-out ${visible ? 'opacity-100 scale-100' : 'opacity-0 scale-95'}`}>
       {/* Header */}
       <div className="px-6 pt-6 pb-5 border-b border-zinc-800">
         <p className="text-[10px] font-semibold uppercase tracking-widest text-zinc-500 mb-1">

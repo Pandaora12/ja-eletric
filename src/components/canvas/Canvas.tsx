@@ -41,7 +41,7 @@ export function Canvas() {
   const {
     activeDocumentId, documents,
     addBlock, updateBlock, deleteBlock, moveBlock, reorderBlocks,
-    updateDocumentTitle, updateDocumentStatus, setSavedPath,
+    updateDocumentTitle, updateDocumentStatus, setSavedPath, toggleCommercialMode,
   } = useDocumentStore();
 
   const settings = useSettingsStore();
@@ -156,6 +156,19 @@ export function Canvas() {
               {doc.status === 'completed' ? 'Concluído' : 'Em execução'}
             </button>
 
+            {/* Modo Comercial */}
+            <button
+              onClick={() => toggleCommercialMode(doc.id)}
+              title={doc.isCommercialMode ? 'PDF mostra apenas resumo financeiro' : 'PDF mostra relatório completo'}
+              className={`text-xs px-2.5 py-1 rounded-full font-medium border transition-colors ${
+                doc.isCommercialMode
+                  ? 'bg-green-50 text-green-700 border-green-200 dark:bg-green-950 dark:text-green-400 dark:border-green-900'
+                  : 'text-zinc-400 border-zinc-200 dark:text-zinc-500 dark:border-zinc-700 hover:border-zinc-400 dark:hover:border-zinc-500'
+              }`}
+            >
+              {doc.isCommercialMode ? '🔒 Comercial' : '📋 Técnico'}
+            </button>
+
             {/* Salvar no computador */}
             <div className="relative" ref={saveMenuRef}>
               <button
@@ -215,7 +228,7 @@ export function Canvas() {
                 items={doc.blocks.map((b) => b.id)}
                 strategy={verticalListSortingStrategy}
               >
-                <div className="flex flex-col gap-4">
+                <div className="flex flex-row flex-wrap items-start gap-4">
                   {doc.blocks.map((block: Block, idx: number) => (
                     <BlockWrapper
                       key={block.id}
@@ -256,13 +269,14 @@ export function Canvas() {
 // ─── Barra de adição ──────────────────────────────────────────────────────────
 
 const QUICK_BLOCKS: { type: BlockType; label: string }[] = [
-  { type: 'paragraph', label: '¶ Parágrafo' },
-  { type: 'heading',   label: 'H Título' },
-  { type: 'table',     label: '⊞ Tabela' },
-  { type: 'callout',   label: '⚠ Aviso' },
-  { type: 'divider',   label: '― Divisor' },
-  { type: 'signature', label: '✎ Assinatura' },
-  { type: 'image',     label: '📷 Foto' },
+  { type: 'paragraph',       label: '¶ Parágrafo' },
+  { type: 'heading',         label: 'H Título' },
+  { type: 'table',           label: '⊞ Tabela' },
+  { type: 'callout',         label: '⚠ Aviso' },
+  { type: 'divider',         label: '― Divisor' },
+  { type: 'signature',       label: '✎ Assinatura' },
+  { type: 'image',           label: '📷 Foto' },
+  { type: 'finance-summary', label: '💰 Resumo' },
 ];
 
 function AddBlockBar({ onAdd }: { onAdd: (type: BlockType) => void }) {

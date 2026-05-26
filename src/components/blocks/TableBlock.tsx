@@ -1,6 +1,7 @@
 import { useState } from 'react';
-import type { Block, TableContent, TableRow } from '../../types/blocks';
+import type { Block, TableContent, TableRow, TableCategory } from '../../types/blocks';
 import { formatBRL, computeRowTotal, parseBRL } from '../../lib/budget';
+import { useDocumentStore } from '../../stores/documentStore';
 
 interface Props {
   block: Block & { content: TableContent };
@@ -129,8 +130,12 @@ function HighlightButton({ active, onClick }: { active: boolean; onClick: () => 
 // ─── Componente principal ─────────────────────────────────────────────────────
 
 export function TableBlock({ block, onChange }: Props) {
-  const { headers, rows } = block.content;
+  const { headers, rows, tableCategory } = block.content;
   const budget = isBudgetTable(headers);
+
+  const { openModal, activeDocumentId } = useDocumentStore(
+    (s) => ({ openModal: s.openModal, activeDocumentId: s.activeDocumentId }),
+  );
   const editableCols = budget ? 5 : headers.length;
 
   const updateHeader = (colIdx: number, value: string) => {
@@ -308,28 +313,57 @@ export function TableBlock({ block, onChange }: Props) {
       </table>
 
       {/* ── Rodapé ── */}
-      <div className="flex items-center justify-between border-t border-zinc-200 dark:border-zinc-700">
-        <button
-          onClick={addRow}
-          className="py-2 px-3 text-xs text-zinc-400 dark:text-zinc-500 hover:text-zinc-600 dark:hover:text-zinc-300 hover:bg-zinc-50 dark:hover:bg-zinc-800 transition-colors"
-        >
-          + Adicionar linha
-        </button>
+      <div className="flex items-center justify-between border-t border-zinc-200 dark:border-zinc-700 flex-wrap gap-1">
+        <div className="flex items-center gap-1">
+          <button
+            onClick={addRow}
+            className="py-2 px-3 text-xs text-zinc-400 dark:text-zinc-500 hover:text-zinc-600 dark:hover:text-zinc-300 hover:bg-zinc-50 dark:hover:bg-zinc-800 transition-colors"
+          >
+            + Adicionar linha
+          </button>
 
-        {budget && (
-          <div className="flex items-baseline gap-2 px-4 py-2 select-none pointer-events-none">
-            <span className="text-[10px] font-semibold uppercase tracking-widest text-zinc-400 dark:text-zinc-500">
-              Total
-            </span>
-            <span className={`text-base font-bold tabular-nums ${
-              grandTotal > 0
-                ? 'text-zinc-900 dark:text-zinc-100'
-                : 'text-zinc-300 dark:text-zinc-600'
-            }`}>
-              R$&nbsp;{formatBRL(grandTotal)}
-            </span>
-          </div>
-        )}
+          {budget && activeDocumentId && (
+            <button
+              onClick={() =>
+                openModal({ type: 'material-picker', data: { docId: activeDocumentId, blockId: block.id } })
+              }
+              title="Abrir dicionário de materiais"
+              className="py-2 px-3 text-xs text-teal-600 dark:text-teal-500 hover:text-teal-700 dark:hover:text-teal-400 hover:bg-teal-50 dark:hover:bg-teal-950/30 transition-colors"
+            >
+              📦 Dicionário
+            </button>
+          )}
+        </div>
+
+        <div className="flex items-center gap-2 px-3 py-1.5">
+          {budget && (
+            <select
+              value={tableCategory ?? 'other'}
+              onChange={(e) => onChange({ tableCategory: e.target.value as TableCategory })}
+              title="Categoria desta tabela para o Resumo Financeiro"
+              className="text-[10px] bg-transparent text-zinc-400 dark:text-zinc-600 border border-zinc-200 dark:border-zinc-700 rounded px-1.5 py-0.5 outline-none hover:border-zinc-400 dark:hover:border-zinc-500 transition-colors cursor-pointer"
+            >
+              <option value="other">Geral</option>
+              <option value="material">Materiais</option>
+              <option value="labor">Mão de Obra</option>
+            </select>
+          )}
+
+          {budget && (
+            <div className="flex items-baseline gap-2 select-none pointer-events-none">
+              <span className="text-[10px] font-semibold uppercase tracking-widest text-zinc-400 dark:text-zinc-500">
+                Total
+              </span>
+              <span className={`text-base font-bold tabular-nums ${
+                grandTotal > 0
+                  ? 'text-zinc-900 dark:text-zinc-100'
+                  : 'text-zinc-300 dark:text-zinc-600'
+              }`}>
+                R$&nbsp;{formatBRL(grandTotal)}
+              </span>
+            </div>
+          )}
+        </div>
       </div>
     </div>
   );

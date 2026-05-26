@@ -9,7 +9,7 @@ import type { Settings } from './settingsStorage';
 import { formatBRL, computeRowTotal, parseBRL, isBudgetTable } from './budget';
 import {
   isHeading, isParagraph, isTable, isDivider,
-  isSignature, isCallout, isImage,
+  isSignature, isCallout, isImage, isFinanceSummary,
 } from '../types/blocks';
 
 // ─── Utilitários ──────────────────────────────────────────────────────────────
@@ -100,6 +100,17 @@ const S = StyleSheet.create({
   // Imagem
   imageBlock: { maxHeight: 240, objectFit: 'contain', marginBottom: 4 },
   imageAlt:   { fontSize: 8, color: '#9ca3af', textAlign: 'center', marginBottom: 8 },
+
+  // Resumo financeiro (modo comercial)
+  summaryWrapper:  { marginBottom: 16, borderWidth: 1, borderColor: '#d1d5db', borderRadius: 4 },
+  summaryHeader:   { backgroundColor: '#f3f4f6', paddingHorizontal: 12, paddingVertical: 8, borderBottomWidth: 1, borderBottomColor: '#d1d5db' },
+  summaryTitle:    { fontSize: 11, fontFamily: 'Helvetica-Bold', color: '#111827', textTransform: 'uppercase', letterSpacing: 1 },
+  summaryRow:      { flexDirection: 'row', justifyContent: 'space-between', paddingHorizontal: 12, paddingVertical: 7, borderBottomWidth: 0.5, borderBottomColor: '#e5e7eb' },
+  summaryRowTotal: { flexDirection: 'row', justifyContent: 'space-between', paddingHorizontal: 12, paddingVertical: 10, backgroundColor: '#f0fdf4' },
+  summaryLabel:    { fontSize: 9, color: '#374151' },
+  summaryValue:    { fontSize: 9, fontFamily: 'Helvetica-Bold', color: '#111827', textAlign: 'right' },
+  summaryTotalLbl: { fontSize: 11, fontFamily: 'Helvetica-Bold', color: '#166534' },
+  summaryTotalVal: { fontSize: 14, fontFamily: 'Helvetica-Bold', color: '#16a34a', textAlign: 'right' },
 
   // Rodapé
   footer: {
@@ -232,6 +243,49 @@ function PdfTable({ block }: { block: Block & { content: TableContent } }) {
   );
 }
 
+function PdfFinanceSummary({ doc }: { doc: Doc }) {
+  let materialTotal = 0;
+  let laborTotal = 0;
+  let otherTotal = 0;
+
+  for (const block of doc.blocks) {
+    if (!isTable(block)) continue;
+    const content = block.content as TableContent;
+    if (!isBudgetTable(content.headers)) continue;
+    const sum = content.rows.reduce((s, r) => s + computeRowTotal(r.cells), 0);
+    const cat = content.tableCategory;
+    if (cat === 'material') materialTotal += sum;
+    else if (cat === 'labor') laborTotal += sum;
+    else otherTotal += sum;
+  }
+
+  const grandTotal = materialTotal + laborTotal + otherTotal;
+
+  const rows: { label: string; value: number }[] = [
+    { label: 'Materiais', value: materialTotal },
+    { label: 'Mão de Obra', value: laborTotal },
+    { label: 'Outros', value: otherTotal },
+  ].filter((r) => r.value > 0);
+
+  return (
+    <View style={[S.block, S.summaryWrapper]}>
+      <View style={S.summaryHeader}>
+        <Text style={S.summaryTitle}>Resumo Financeiro</Text>
+      </View>
+      {rows.map((r) => (
+        <View key={r.label} style={S.summaryRow}>
+          <Text style={S.summaryLabel}>{r.label}</Text>
+          <Text style={S.summaryValue}>{`R$ ${formatBRL(r.value)}`}</Text>
+        </View>
+      ))}
+      <View style={S.summaryRowTotal}>
+        <Text style={S.summaryTotalLbl}>VALOR TOTAL</Text>
+        <Text style={S.summaryTotalVal}>{`R$ ${formatBRL(grandTotal)}`}</Text>
+      </View>
+    </View>
+  );
+}
+
 // ─── Componente de documento PDF ─────────────────────────────────────────────
 
 interface PdfDocProps {
@@ -276,15 +330,22 @@ function PdfDoc({ doc, settings, logoUri, imageMap }: PdfDocProps) {
         {/* Blocos */}
         {doc.blocks.map((block) => {
           if (block.type === 'company-header') return null;
+          if (isFinanceSummary(block)) return null; // UI-only, replaced by PdfFinanceSummary
           if (isHeading(block))   return <PdfHeading   key={block.id} block={block} />;
           if (isParagraph(block)) return <PdfParagraph key={block.id} block={block} />;
-          if (isTable(block))     return <PdfTable     key={block.id} block={block} />;
           if (isDivider(block))   return <PdfDivider   key={block.id} block={block} />;
           if (isSignature(block)) return <PdfSignature key={block.id} block={block} />;
           if (isCallout(block))   return <PdfCallout   key={block.id} block={block} />;
           if (isImage(block))     return <PdfImageBlock key={block.id} block={block} imageMap={imageMap} />;
+          if (isTable(block)) {
+            if (doc.isCommercialMode) return null;
+            return <PdfTable key={block.id} block={block} />;
+          }
           return null;
         })}
+
+        {/* Resumo financeiro — aparece em modo comercial */}
+        {doc.isCommercialMode && <PdfFinanceSummary doc={doc} />}
 
         {/* Numeração de página */}
         <Text

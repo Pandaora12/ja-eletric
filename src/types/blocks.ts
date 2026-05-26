@@ -6,7 +6,8 @@ export type BlockType =
   | 'signature'
   | 'callout'
   | 'image'
-  | 'company-header';
+  | 'company-header'
+  | 'finance-summary';
 
 export interface HeadingContent {
   text: string;
@@ -22,9 +23,12 @@ export interface TableRow {
   isHighlighted?: boolean;
 }
 
+export type TableCategory = 'material' | 'labor' | 'other';
+
 export interface TableContent {
   headers: string[];
   rows: TableRow[];
+  tableCategory?: TableCategory;
 }
 
 export interface DividerContent {
@@ -47,9 +51,14 @@ export interface CalloutContent {
 export interface ImageContent {
   path: string;
   alt: string;
+  width?: number; // percentage 25–100, default 100
 }
 
 export interface CompanyHeaderContent {
+  _marker: true;
+}
+
+export interface FinanceSummaryContent {
   _marker: true;
 }
 
@@ -61,7 +70,8 @@ export type BlockContent =
   | SignatureContent
   | CalloutContent
   | ImageContent
-  | CompanyHeaderContent;
+  | CompanyHeaderContent
+  | FinanceSummaryContent;
 
 export interface Block {
   id: string;
@@ -71,11 +81,12 @@ export interface Block {
 
 // ─── Type guards ─────────────────────────────────────────────────────────────
 
-export const isHeading   = (b: Block): b is Block & { content: HeadingContent }   => b.type === 'heading';
-export const isParagraph = (b: Block): b is Block & { content: ParagraphContent } => b.type === 'paragraph';
-export const isTable     = (b: Block): b is Block & { content: TableContent }     => b.type === 'table';
-export const isDivider   = (b: Block): b is Block & { content: DividerContent }   => b.type === 'divider';
-export const isSignature = (b: Block): b is Block & { content: SignatureContent } => b.type === 'signature';
-export const isCallout   = (b: Block): b is Block & { content: CalloutContent }   => b.type === 'callout';
-export const isImage         = (b: Block): b is Block & { content: ImageContent }         => b.type === 'image';
-export const isCompanyHeader = (b: Block): b is Block & { content: CompanyHeaderContent } => b.type === 'company-header';
+export const isHeading        = (b: Block): b is Block & { content: HeadingContent }        => b.type === 'heading';
+export const isParagraph      = (b: Block): b is Block & { content: ParagraphContent }      => b.type === 'paragraph';
+export const isTable          = (b: Block): b is Block & { content: TableContent }          => b.type === 'table';
+export const isDivider        = (b: Block): b is Block & { content: DividerContent }        => b.type === 'divider';
+export const isSignature      = (b: Block): b is Block & { content: SignatureContent }      => b.type === 'signature';
+export const isCallout        = (b: Block): b is Block & { content: CalloutContent }        => b.type === 'callout';
+export const isImage          = (b: Block): b is Block & { content: ImageContent }          => b.type === 'image';
+export const isCompanyHeader  = (b: Block): b is Block & { content: CompanyHeaderContent } => b.type === 'company-header';
+export const isFinanceSummary = (b: Block): b is Block & { content: FinanceSummaryContent } => b.type === 'finance-summary';
