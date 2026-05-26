@@ -277,6 +277,7 @@ const QUICK_BLOCKS: { type: BlockType; label: string }[] = [
   { type: 'signature',       label: '✎ Assinatura' },
   { type: 'image',           label: '📷 Foto' },
   { type: 'finance-summary', label: '💰 Resumo' },
+  { type: 'load-report',    label: '⚡ Carga' },
 ];
 
 function AddBlockBar({ onAdd }: { onAdd: (type: BlockType) => void }) {

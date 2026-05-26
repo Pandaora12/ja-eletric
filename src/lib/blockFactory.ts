@@ -1,4 +1,4 @@
-import type { Block, BlockType } from '../types/blocks';
+import type { Block, BlockType, LoadReportContent } from '../types/blocks';
 
 export interface BlockOverrides {
   signatureName?: string;
@@ -48,5 +48,21 @@ export function createBlock(type: BlockType, overrides?: BlockOverrides): Block 
 
     case 'finance-summary':
       return { id, type, content: { _marker: true } };
+
+    case 'load-report':
+      return {
+        id, type,
+        content: {
+          rows: [{
+            equipment: '',
+            qty: 1,
+            powerCV: 0,
+            startupType: 'direct',
+            voltagePhase: '380-3',
+            regime: 'S1',
+            demandFactor: 0.80,
+          }],
+        } satisfies LoadReportContent,
+      };
   }
 }

@@ -7,11 +7,8 @@ interface Props {
 }
 
 const DOC_OPTIONS: { type: DocumentType; desc: string }[] = [
-  { type: 'memorial',      desc: 'Especificação técnica detalhada da instalação' },
-  { type: 'proposal',      desc: 'Proposta para cliente com orçamento integrado' },
-  { type: 'material-list', desc: 'Relação completa de materiais e quantidades' },
-  { type: 'load-report',   desc: 'Análise e dimensionamento da carga elétrica' },
-  { type: 'blank',         desc: 'Começa do zero, sem template pré-definido' },
+  { type: 'load-report', desc: 'Análise e dimensionamento da carga elétrica (NBR 5410)' },
+  { type: 'blank',       desc: 'Começa do zero, sem template pré-definido' },
 ];
 
 export function CreateDocModal({ onClose }: Props) {
@@ -64,7 +61,7 @@ export function CreateDocModal({ onClose }: Props) {
                 selected === type
                   ? 'bg-zinc-800 border-zinc-500 text-zinc-100'
                   : 'bg-zinc-950/50 border-zinc-800 text-zinc-400 hover:border-zinc-600 hover:text-zinc-200 hover:bg-zinc-800/50'
-              } ${type === 'blank' ? 'col-span-2' : ''}`}
+              }`}
             >
               <p className="text-xs font-semibold mb-0.5">{DOCUMENT_TYPE_LABELS[type]}</p>
               <p className="text-[10px] text-zinc-600 leading-snug">{desc}</p>

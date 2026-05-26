@@ -9,8 +9,9 @@ import type { Settings } from './settingsStorage';
 import { formatBRL, computeRowTotal, parseBRL, isBudgetTable } from './budget';
 import {
   isHeading, isParagraph, isTable, isDivider,
-  isSignature, isCallout, isImage, isFinanceSummary,
+  isSignature, isCallout, isImage, isFinanceSummary, isLoadReport,
 } from '../types/blocks';
+import { calcLoadRow, STARTUP_LABELS, VOLTAGE_LABELS } from '../components/blocks/LoadReportBlock';
 
 // ─── Utilitários ──────────────────────────────────────────────────────────────
 
@@ -100,6 +101,28 @@ const S = StyleSheet.create({
   // Imagem
   imageBlock: { maxHeight: 240, objectFit: 'contain', marginBottom: 4 },
   imageAlt:   { fontSize: 8, color: '#9ca3af', textAlign: 'center', marginBottom: 8 },
+
+  // Relatório de carga
+  lrWrapper:     { marginBottom: 14, borderWidth: 0.5, borderColor: '#d1d5db' },
+  lrHeader:      { backgroundColor: '#f1f5f9', paddingHorizontal: 8, paddingVertical: 5, borderBottomWidth: 0.5, borderBottomColor: '#cbd5e1' },
+  lrHeaderTxt:   { fontSize: 7, fontFamily: 'Helvetica-Bold', color: '#475569', textTransform: 'uppercase', letterSpacing: 0.5 },
+  lrMeta:        { fontSize: 6, color: '#94a3b8', marginTop: 1 },
+  lrColHead:     { flexDirection: 'row', backgroundColor: '#f8fafc', borderBottomWidth: 0.5, borderBottomColor: '#e2e8f0' },
+  lrRow:         { flexDirection: 'row', borderBottomWidth: 0.3, borderBottomColor: '#f1f5f9' },
+  lrRowAlt:      { flexDirection: 'row', borderBottomWidth: 0.3, borderBottomColor: '#f1f5f9', backgroundColor: '#fafafa' },
+  lrCell:        { paddingHorizontal: 4, paddingVertical: 3, borderRightWidth: 0.3, borderRightColor: '#e2e8f0' },
+  lrTh:          { fontSize: 6, fontFamily: 'Helvetica-Bold', color: '#64748b', textTransform: 'uppercase' },
+  lrTd:          { fontSize: 7.5, color: '#374151' },
+  lrComp:        { fontSize: 7.5, color: '#0369a1', fontFamily: 'Helvetica-Bold' },
+  lrWarn:        { fontSize: 7.5, color: '#d97706', fontFamily: 'Helvetica-Bold' },
+  lrSummary:     { flexDirection: 'row', borderTopWidth: 1, borderTopColor: '#cbd5e1', backgroundColor: '#f8fafc' },
+  lrSumBox:      { flex: 1, paddingHorizontal: 8, paddingVertical: 6, borderRightWidth: 0.5, borderRightColor: '#e2e8f0' },
+  lrSumLbl:      { fontSize: 6, fontFamily: 'Helvetica-Bold', color: '#64748b', textTransform: 'uppercase', marginBottom: 2 },
+  lrSumVal:      { fontSize: 12, fontFamily: 'Helvetica-Bold', color: '#111827' },
+  lrSumSub:      { fontSize: 6, color: '#94a3b8', marginTop: 1 },
+  lrSumWarnBox:  { flex: 1, paddingHorizontal: 8, paddingVertical: 6, backgroundColor: '#fffbeb' },
+  lrSumWarnVal:  { fontSize: 12, fontFamily: 'Helvetica-Bold', color: '#d97706' },
+  lrSumWarnTxt:  { fontSize: 6, color: '#b45309', fontFamily: 'Helvetica-Bold', marginTop: 2 },
 
   // Resumo financeiro (modo comercial)
   summaryWrapper:  { marginBottom: 16, borderWidth: 1, borderColor: '#d1d5db', borderRadius: 4 },
@@ -243,6 +266,99 @@ function PdfTable({ block }: { block: Block & { content: TableContent } }) {
   );
 }
 
+function PdfLoadReport({ block }: { block: Block & { content: import('../types/blocks').LoadReportContent } }) {
+  const { rows } = block.content;
+  const computed = rows.map(calcLoadRow);
+
+  const totalInstKW  = computed.reduce((s, c, i) => s + c.kw * rows[i].qty, 0);
+  const totalDemKW   = computed.reduce((s, c) => s + c.demandKw, 0);
+  let maxIPart = 0; let maxIName = '';
+  computed.forEach((c, i) => {
+    const v = c.iPart * rows[i].qty;
+    if (v > maxIPart) { maxIPart = v; maxIName = rows[i].equipment || `Linha ${i + 1}`; }
+  });
+  const flickerRisk = maxIPart > 300;
+
+  const n = (v: number, d = 2) => v.toFixed(d);
+
+  // column widths (% of page width)
+  const CW = { equip: '22%', qty: '5%', cv: '6%', kw: '6%', startup: '13%', volt: '8%', inom: '7%', ipart: '7%', regime: '5%', fd: '5%', dem: '7%', total: '9%' };
+
+  return (
+    <View style={[S.block, S.lrWrapper]}>
+      {/* Cabeçalho */}
+      <View style={S.lrHeader}>
+        <Text style={S.lrHeaderTxt}>⚡ Relatório de Carga — NBR 5410 / IEC 60034-1</Text>
+        <Text style={S.lrMeta}>η = 90% · cosφ = 0,85 · 1 CV = 0,7355 kW</Text>
+      </View>
+
+      {/* Cabeçalho da tabela */}
+      <View style={S.lrColHead}>
+        {[
+          { label: 'Equipamento', w: CW.equip },
+          { label: 'Qtd', w: CW.qty },
+          { label: 'CV', w: CW.cv },
+          { label: 'kW', w: CW.kw },
+          { label: 'Tipo Partida', w: CW.startup },
+          { label: 'Tensão', w: CW.volt },
+          { label: 'I-nom (A)', w: CW.inom },
+          { label: 'I-part (A)', w: CW.ipart },
+          { label: 'Reg.', w: CW.regime },
+          { label: 'Fd', w: CW.fd },
+          { label: 'Dem.(kW)', w: CW.dem },
+        ].map((col) => (
+          <View key={col.label} style={[S.lrCell, { width: col.w }]}>
+            <Text style={[S.lrTh, { textAlign: 'right' }]}>{col.label}</Text>
+          </View>
+        ))}
+      </View>
+
+      {/* Linhas */}
+      {rows.map((row, ri) => {
+        const c = computed[ri];
+        const rowStyle = ri % 2 === 1 ? S.lrRowAlt : S.lrRow;
+        return (
+          <View key={ri} style={rowStyle}>
+            <View style={[S.lrCell, { width: CW.equip }]}><Text style={S.lrTd}>{row.equipment || '—'}</Text></View>
+            <View style={[S.lrCell, { width: CW.qty }]}><Text style={[S.lrTd, { textAlign: 'right' }]}>{row.qty}</Text></View>
+            <View style={[S.lrCell, { width: CW.cv }]}><Text style={[S.lrTd, { textAlign: 'right' }]}>{row.powerCV}</Text></View>
+            <View style={[S.lrCell, { width: CW.kw }]}><Text style={[S.lrComp, { textAlign: 'right' }]}>{n(c.kw)}</Text></View>
+            <View style={[S.lrCell, { width: CW.startup }]}><Text style={S.lrTd}>{STARTUP_LABELS[row.startupType]}</Text></View>
+            <View style={[S.lrCell, { width: CW.volt }]}><Text style={S.lrTd}>{VOLTAGE_LABELS[row.voltagePhase]}</Text></View>
+            <View style={[S.lrCell, { width: CW.inom }]}><Text style={[S.lrComp, { textAlign: 'right' }]}>{n(c.iNom)}</Text></View>
+            <View style={[S.lrCell, { width: CW.ipart }]}>
+              <Text style={[c.iPart * row.qty > 300 ? S.lrWarn : S.lrComp, { textAlign: 'right' }]}>{n(c.iPart)}</Text>
+            </View>
+            <View style={[S.lrCell, { width: CW.regime }]}><Text style={[S.lrTd, { textAlign: 'right' }]}>{row.regime}</Text></View>
+            <View style={[S.lrCell, { width: CW.fd }]}><Text style={[S.lrTd, { textAlign: 'right' }]}>{row.demandFactor.toFixed(2)}</Text></View>
+            <View style={[S.lrCell, { width: CW.dem }]}><Text style={[S.lrComp, { textAlign: 'right' }]}>{n(c.demandKw)}</Text></View>
+          </View>
+        );
+      })}
+
+      {/* Resumo executivo */}
+      <View style={S.lrSummary}>
+        <View style={S.lrSumBox}>
+          <Text style={S.lrSumLbl}>Carga Instalada</Text>
+          <Text style={S.lrSumVal}>{n(totalInstKW)} kW</Text>
+          <Text style={S.lrSumSub}>{n(totalInstKW / 0.7355, 1)} CV total</Text>
+        </View>
+        <View style={S.lrSumBox}>
+          <Text style={S.lrSumLbl}>Demanda Total</Text>
+          <Text style={[S.lrSumVal, { color: '#0369a1' }]}>{n(totalDemKW)} kW</Text>
+          <Text style={S.lrSumSub}>Fd médio aplicado</Text>
+        </View>
+        <View style={flickerRisk ? S.lrSumWarnBox : S.lrSumBox}>
+          <Text style={S.lrSumLbl}>Maior I-partida</Text>
+          <Text style={flickerRisk ? S.lrSumWarnVal : S.lrSumVal}>{n(maxIPart)} A</Text>
+          <Text style={S.lrSumSub}>{maxIName}</Text>
+          {flickerRisk && <Text style={S.lrSumWarnTxt}>⚠ Risco de flicker</Text>}
+        </View>
+      </View>
+    </View>
+  );
+}
+
 function PdfFinanceSummary({ doc }: { doc: Doc }) {
   let materialTotal = 0;
   let laborTotal = 0;
@@ -341,6 +457,7 @@ function PdfDoc({ doc, settings, logoUri, imageMap }: PdfDocProps) {
             if (doc.isCommercialMode) return null;
             return <PdfTable key={block.id} block={block} />;
           }
+          if (isLoadReport(block)) return <PdfLoadReport key={block.id} block={block} />;
           return null;
         })}
 

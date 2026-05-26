@@ -133,9 +133,8 @@ export function TableBlock({ block, onChange }: Props) {
   const { headers, rows, tableCategory } = block.content;
   const budget = isBudgetTable(headers);
 
-  const { openModal, activeDocumentId } = useDocumentStore(
-    (s) => ({ openModal: s.openModal, activeDocumentId: s.activeDocumentId }),
-  );
+  const openModal = useDocumentStore((s) => s.openModal);
+  const activeDocumentId = useDocumentStore((s) => s.activeDocumentId);
   const editableCols = budget ? 5 : headers.length;
 
   const updateHeader = (colIdx: number, value: string) => {
@@ -186,16 +185,16 @@ export function TableBlock({ block, onChange }: Props) {
       <table className="w-full border-collapse text-left text-sm">
 
         <colgroup>
-          {budget && <col className="w-5" />}   {/* Destaque */}
-          <col className="w-10" />              {/* Item */}
-          <col />                               {/* Descrição */}
+          {budget && <col className="w-5" />}
+          <col className="w-10" />
+          <col />
           {budget && <>
-            <col className="w-16" />            {/* Qtd. */}
-            <col className="w-14" />            {/* Un. */}
-            <col className="w-32" />            {/* Valor Unit. */}
-            <col className="w-32" />            {/* Total */}
+            <col className="w-16" />
+            <col className="w-14" />
+            <col className="w-32" />
+            <col className="w-32" />
           </>}
-          <col className="w-8" />              {/* Ações */}
+          <col className="w-8" />
         </colgroup>
 
         {/* ── Cabeçalho ── */}

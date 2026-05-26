@@ -7,3 +7,4 @@ export { CalloutBlock }        from './CalloutBlock';
 export { ImageBlock }          from './ImageBlock';
 export { CompanyHeaderBlock }  from './CompanyHeaderBlock';
 export { FinanceSummaryBlock } from './FinanceSummaryBlock';
+export { LoadReportBlock }    from './LoadReportBlock';

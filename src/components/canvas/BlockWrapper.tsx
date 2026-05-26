@@ -5,12 +5,12 @@ import type { Block, BlockContent } from '../../types/blocks';
 import {
   HeadingBlock, ParagraphBlock, TableBlock,
   DividerBlock, SignatureBlock, CalloutBlock,
-  ImageBlock, CompanyHeaderBlock, FinanceSummaryBlock,
+  ImageBlock, CompanyHeaderBlock, FinanceSummaryBlock, LoadReportBlock,
 } from '../blocks';
 import {
   isHeading, isParagraph, isTable,
   isDivider, isSignature, isCallout,
-  isImage, isCompanyHeader, isFinanceSummary,
+  isImage, isCompanyHeader, isFinanceSummary, isLoadReport,
 } from '../../types/blocks';
 import { DragHandleIcon } from './Canvas';
 
@@ -88,6 +88,7 @@ export function BlockWrapper({
         {isImage(block)          && <ImageBlock            block={block} onChange={onUpdate} />}
         {isCompanyHeader(block)  && <CompanyHeaderBlock    block={block} />}
         {isFinanceSummary(block) && <FinanceSummaryBlock />}
+        {isLoadReport(block)     && <LoadReportBlock       block={block} onChange={onUpdate} />}
       </div>
 
       {/* ── Menu "+ bloco" abaixo ─────────────────────────────────── */}
@@ -109,6 +110,7 @@ const BLOCK_OPTIONS: { type: Block['type']; label: string }[] = [
   { type: 'signature',      label: 'Assinatura' },
   { type: 'image',          label: '📷 Foto' },
   { type: 'finance-summary',label: '💰 Resumo' },
+  { type: 'load-report',   label: '⚡ Carga' },
 ];
 
 function AddBlockMenu({ onAdd }: { onAdd: (type: Block['type']) => void }) {

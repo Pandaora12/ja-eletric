@@ -20,7 +20,9 @@ function SummaryRow({ label, value, dim = false }: { label: string; value: numbe
 // ─── FinanceSummaryBlock ──────────────────────────────────────────────────────
 
 export function FinanceSummaryBlock() {
-  const doc = useDocumentStore((s) => s.getActiveDocument());
+  const doc = useDocumentStore((s) =>
+    s.activeDocumentId ? (s.documents[s.activeDocumentId] ?? null) : null,
+  );
 
   if (!doc) return null;
 

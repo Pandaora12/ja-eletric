@@ -88,7 +88,9 @@ export const useDocumentStore = create<DocumentState>((set, get) => ({
       title: title ?? defaultTitles[type],
       type,
       status: 'running',
-      blocks: [createBlock('company-header'), createBlock('heading')],
+      blocks: type === 'load-report'
+        ? [createBlock('company-header'), createBlock('heading'), createBlock('load-report')]
+        : [createBlock('company-header'), createBlock('heading')],
       createdAt: now,
       updatedAt: now,
     };

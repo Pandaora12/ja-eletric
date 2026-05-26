@@ -7,7 +7,8 @@ export type BlockType =
   | 'callout'
   | 'image'
   | 'company-header'
-  | 'finance-summary';
+  | 'finance-summary'
+  | 'load-report';
 
 export interface HeadingContent {
   text: string;
@@ -62,6 +63,26 @@ export interface FinanceSummaryContent {
   _marker: true;
 }
 
+// ─── LoadReport types ─────────────────────────────────────────────────────────
+
+export type StartupType = 'direct' | 'star-delta' | 'soft-starter' | 'vfd';
+export type VoltagePhase = '127-1' | '220-1' | '220-3' | '380-3' | '440-3' | '690-3';
+export type DutyRegime = 'S1'|'S2'|'S3'|'S4'|'S5'|'S6'|'S7'|'S8'|'S9'|'S10';
+
+export interface LoadReportRow {
+  equipment: string;
+  qty: number;
+  powerCV: number;
+  startupType: StartupType;
+  voltagePhase: VoltagePhase;
+  regime: DutyRegime;
+  demandFactor: number;
+}
+
+export interface LoadReportContent {
+  rows: LoadReportRow[];
+}
+
 export type BlockContent =
   | HeadingContent
   | ParagraphContent
@@ -71,7 +92,8 @@ export type BlockContent =
   | CalloutContent
   | ImageContent
   | CompanyHeaderContent
-  | FinanceSummaryContent;
+  | FinanceSummaryContent
+  | LoadReportContent;
 
 export interface Block {
   id: string;
@@ -90,3 +112,4 @@ export const isCallout        = (b: Block): b is Block & { content: CalloutConte
 export const isImage          = (b: Block): b is Block & { content: ImageContent }          => b.type === 'image';
 export const isCompanyHeader  = (b: Block): b is Block & { content: CompanyHeaderContent } => b.type === 'company-header';
 export const isFinanceSummary = (b: Block): b is Block & { content: FinanceSummaryContent } => b.type === 'finance-summary';
+export const isLoadReport     = (b: Block): b is Block & { content: LoadReportContent }     => b.type === 'load-report';
