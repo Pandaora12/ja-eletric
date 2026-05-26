@@ -6,6 +6,7 @@ export type ModalPayload =
   | { type: 'create-doc';       data: null }
   | { type: 'rename-doc';       data: { docId: string; currentTitle: string } }
   | { type: 'material-picker';  data: { docId: string; blockId: string } }
+  | { type: 'dictionary';       data: null }
   | { type: null;               data: null };
 
 // Helper — payload válido que pode ser passado para openModal

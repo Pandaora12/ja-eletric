@@ -53,27 +53,27 @@ export function CompanyHeaderBlock({ block: _ }: Props) {
   }
 
   return (
-    <div
-      className="flex items-center justify-between pb-4 border-b-2"
-      style={{ borderColor: color }}
-    >
-      {/* Logo à esquerda */}
-      <div className="flex-shrink-0">
+    <div className="mb-1">
+      {/* Linha superior: logo + nome */}
+      <div className="flex items-center gap-4 pb-3">
         {logoUrl ? (
-          <img src={logoUrl} alt={companyName} className="h-14 w-auto object-contain" />
+          <img src={logoUrl} alt={companyName} className="h-14 w-auto object-contain shrink-0" />
         ) : (
-          <div className="h-12 w-12 rounded bg-zinc-100 dark:bg-zinc-800 flex items-center justify-center text-[9px] font-semibold uppercase tracking-widest text-zinc-400 dark:text-zinc-600">
+          <div className="h-12 w-12 rounded bg-zinc-100 dark:bg-zinc-800 flex items-center justify-center text-[9px] font-semibold uppercase tracking-widest text-zinc-400 dark:text-zinc-600 shrink-0">
             Logo
           </div>
         )}
       </div>
 
-      {/* Nome da empresa à direita */}
-      <div className="text-right">
-        <p className="text-xl font-bold tracking-tight leading-tight" style={{ color }}>
+      {/* Linha divisória */}
+      <div className="border-b-2 mb-2" style={{ borderColor: color }} />
+
+      {/* Nome da empresa — no final, abaixo da linha */}
+      {companyName && (
+        <p className="text-base font-bold tracking-tight" style={{ color }}>
           {companyName}
         </p>
-      </div>
+      )}
     </div>
   );
 }

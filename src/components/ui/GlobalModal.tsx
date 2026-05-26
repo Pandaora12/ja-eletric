@@ -5,6 +5,7 @@ import { DeleteDocModal }      from './modals/DeleteDocModal';
 import { CreateDocModal }      from './modals/CreateDocModal';
 import { RenameDocModal }      from './modals/RenameDocModal';
 import { MaterialPickerModal } from './modals/MaterialPickerModal';
+import { DictionaryModal }     from './modals/DictionaryModal';
 
 export function GlobalModal() {
   const modal      = useDocumentStore((s) => s.modal);
@@ -55,6 +56,9 @@ export function GlobalModal() {
       )}
       {modal.type === 'material-picker' && (
         <MaterialPickerModal data={modal.data} onClose={closeModal} />
+      )}
+      {modal.type === 'dictionary' && (
+        <DictionaryModal onClose={closeModal} />
       )}
     </div>,
     document.body,

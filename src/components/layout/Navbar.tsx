@@ -54,8 +54,15 @@ export function Navbar() {
         <LiveClock />
       </div>
 
-      {/* Direita: engrenagem + novo documento */}
+      {/* Direita: dicionário + engrenagem + novo documento */}
       <div className="flex items-center gap-2">
+        <button
+          onClick={() => openModal({ type: 'dictionary', data: null })}
+          title="Dicionário de Materiais"
+          className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium rounded border border-zinc-200 dark:border-zinc-700 text-zinc-500 dark:text-zinc-400 hover:text-zinc-700 dark:hover:text-zinc-200 hover:bg-zinc-100 dark:hover:bg-zinc-800 transition-colors"
+        >
+          <span>📖</span> Dicionário
+        </button>
         <button
           onClick={toggleSettings}
           title="Configurações"
@@ -67,7 +74,7 @@ export function Navbar() {
           onClick={() => openModal({ type: 'create-doc', data: null })}
           className="flex items-center gap-1.5 px-4 py-2 text-xs font-semibold bg-zinc-900 dark:bg-zinc-100 text-white dark:text-zinc-900 rounded hover:bg-zinc-700 dark:hover:bg-zinc-300 transition-colors tracking-widest uppercase"
         >
-          + Novo Documento
+          + Novo
         </button>
       </div>
     </header>

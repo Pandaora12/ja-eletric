@@ -4,6 +4,7 @@ import {
 
 export interface Item {
   id: string;
+  voltage: 'BT' | 'AT';
   category: string;
   name: string;
   unit: string;
@@ -14,7 +15,7 @@ export interface Item {
 const FILE = 'items.json';
 const BASE = BaseDirectory.AppData;
 
-export const ITEM_CATEGORIES = [
+export const BT_CATEGORIES = [
   'Cabos',
   'Iluminação',
   'Tomadas e Interruptores',
@@ -24,49 +25,94 @@ export const ITEM_CATEGORIES = [
   'Outros',
 ] as const;
 
+export const AT_CATEGORIES = [
+  'Transformadores',
+  'Chaves e Seccionadores',
+  'Para-Raios e DPS',
+  'Cabos AT',
+  'Cubículos MT',
+] as const;
+
+export const ITEM_CATEGORIES = [...BT_CATEGORIES, ...AT_CATEGORIES] as const;
+
 function uuid(): string { return crypto.randomUUID(); }
+function bt(category: string, name: string, unit: string, unitPrice: number, description: string): Item {
+  return { id: uuid(), voltage: 'BT', category, name, unit, unitPrice, description };
+}
+function at(category: string, name: string, unit: string, unitPrice: number, description: string): Item {
+  return { id: uuid(), voltage: 'AT', category, name, unit, unitPrice, description };
+}
 
 export const DEFAULT_ITEMS: Item[] = [
-  // Cabos
-  { id: uuid(), category: 'Cabos', name: 'Cabo 1,5mm² (flexível)', unit: 'm', unitPrice: 2.50, description: '750V, 70°C' },
-  { id: uuid(), category: 'Cabos', name: 'Cabo 2,5mm² (flexível)', unit: 'm', unitPrice: 3.80, description: '750V, 70°C' },
-  { id: uuid(), category: 'Cabos', name: 'Cabo 4mm² (flexível)',   unit: 'm', unitPrice: 6.20, description: '750V, 70°C' },
-  { id: uuid(), category: 'Cabos', name: 'Cabo 6mm² (flexível)',   unit: 'm', unitPrice: 9.10, description: '750V, 70°C' },
-  { id: uuid(), category: 'Cabos', name: 'Cabo 10mm² (flexível)',  unit: 'm', unitPrice: 14.50, description: '750V, 70°C' },
-  { id: uuid(), category: 'Cabos', name: 'Cabo 16mm² (flexível)',  unit: 'm', unitPrice: 22.00, description: '750V, 70°C' },
-  // Iluminação
-  { id: uuid(), category: 'Iluminação', name: 'Lâmpada LED 9W',          unit: 'un', unitPrice: 18.00, description: 'Bivolt, 6500K' },
-  { id: uuid(), category: 'Iluminação', name: 'Lâmpada LED 12W',         unit: 'un', unitPrice: 22.00, description: 'Bivolt, 6500K' },
-  { id: uuid(), category: 'Iluminação', name: 'Spot LED embutir 7W',     unit: 'un', unitPrice: 45.00, description: 'Bivolt, 4000K' },
-  { id: uuid(), category: 'Iluminação', name: 'Luminária sobrepor 40W',  unit: 'un', unitPrice: 120.00, description: 'Fluorescente' },
-  { id: uuid(), category: 'Iluminação', name: 'Refletor LED 20W',        unit: 'un', unitPrice: 65.00, description: 'IP65, externo' },
-  // Tomadas e Interruptores
-  { id: uuid(), category: 'Tomadas e Interruptores', name: 'Tomada 10A NBR 14136',  unit: 'un', unitPrice: 15.00, description: 'Padrão brasileiro' },
-  { id: uuid(), category: 'Tomadas e Interruptores', name: 'Tomada 20A NBR 14136',  unit: 'un', unitPrice: 25.00, description: 'Padrão brasileiro' },
-  { id: uuid(), category: 'Tomadas e Interruptores', name: 'Interruptor simples',   unit: 'un', unitPrice: 12.00, description: '10A, 250V' },
-  { id: uuid(), category: 'Tomadas e Interruptores', name: 'Interruptor paralelo',  unit: 'un', unitPrice: 18.00, description: '10A, 250V' },
-  { id: uuid(), category: 'Tomadas e Interruptores', name: 'Interruptor three-way', unit: 'un', unitPrice: 22.00, description: '10A, 250V' },
-  // Proteção
-  { id: uuid(), category: 'Proteção', name: 'Disjuntor 10A (mono)',  unit: 'un', unitPrice: 22.00, description: 'Curva C' },
-  { id: uuid(), category: 'Proteção', name: 'Disjuntor 16A (mono)',  unit: 'un', unitPrice: 23.00, description: 'Curva C' },
-  { id: uuid(), category: 'Proteção', name: 'Disjuntor 20A (mono)',  unit: 'un', unitPrice: 24.00, description: 'Curva C' },
-  { id: uuid(), category: 'Proteção', name: 'Disjuntor 32A (mono)',  unit: 'un', unitPrice: 28.00, description: 'Curva C' },
-  { id: uuid(), category: 'Proteção', name: 'Disjuntor 40A (bi)',    unit: 'un', unitPrice: 55.00, description: 'Curva C' },
-  { id: uuid(), category: 'Proteção', name: 'DR 25A (bipolar)',       unit: 'un', unitPrice: 85.00, description: '30mA, classe AC' },
-  { id: uuid(), category: 'Proteção', name: 'DPS classe II',          unit: 'un', unitPrice: 65.00, description: 'Protetor de surto' },
-  // Eletrodutos e Caixas
-  { id: uuid(), category: 'Eletrodutos e Caixas', name: 'Eletroduto PVC 3/4"',    unit: 'm',  unitPrice: 4.50, description: '' },
-  { id: uuid(), category: 'Eletrodutos e Caixas', name: 'Eletroduto PVC 1"',      unit: 'm',  unitPrice: 6.80, description: '' },
-  { id: uuid(), category: 'Eletrodutos e Caixas', name: 'Caixa passagem 4x2"',   unit: 'un', unitPrice: 3.50, description: '' },
-  { id: uuid(), category: 'Eletrodutos e Caixas', name: 'Caixa passagem 4x4"',   unit: 'un', unitPrice: 5.00, description: '' },
-  { id: uuid(), category: 'Eletrodutos e Caixas', name: 'Quadro de distribuição 12 disj.', unit: 'un', unitPrice: 85.00, description: '' },
-  // Mão de Obra
-  { id: uuid(), category: 'Mão de Obra', name: 'Hora técnica (eletricista)',     unit: 'h',  unitPrice: 80.00,  description: 'Residencial' },
-  { id: uuid(), category: 'Mão de Obra', name: 'Ponto elétrico (tomada)',        unit: 'un', unitPrice: 150.00, description: 'Inclui material básico' },
-  { id: uuid(), category: 'Mão de Obra', name: 'Ponto de iluminação',           unit: 'un', unitPrice: 130.00, description: 'Inclui material básico' },
-  { id: uuid(), category: 'Mão de Obra', name: 'Instalação de disjuntor',       unit: 'un', unitPrice: 60.00,  description: '' },
-  { id: uuid(), category: 'Mão de Obra', name: 'Instalação de luminária',       unit: 'un', unitPrice: 70.00,  description: '' },
-  { id: uuid(), category: 'Mão de Obra', name: 'Passagem de cabo (por metro)',  unit: 'm',  unitPrice: 12.00,  description: '' },
+  // ── BT: Cabos ──────────────────────────────────────────────────────────────
+  bt('Cabos', 'Cabo 1,5mm² (flexível)',  'm',  2.50,  '750V, 70°C'),
+  bt('Cabos', 'Cabo 2,5mm² (flexível)',  'm',  3.80,  '750V, 70°C'),
+  bt('Cabos', 'Cabo 4mm² (flexível)',    'm',  6.20,  '750V, 70°C'),
+  bt('Cabos', 'Cabo 6mm² (flexível)',    'm',  9.10,  '750V, 70°C'),
+  bt('Cabos', 'Cabo 10mm² (flexível)',   'm',  14.50, '750V, 70°C'),
+  bt('Cabos', 'Cabo 16mm² (flexível)',   'm',  22.00, '750V, 70°C'),
+  bt('Cabos', 'Cabo 25mm² (flexível)',   'm',  34.00, '750V, 70°C'),
+  // ── BT: Iluminação ─────────────────────────────────────────────────────────
+  bt('Iluminação', 'Lâmpada LED 9W',         'un', 18.00,  'Bivolt, 6500K'),
+  bt('Iluminação', 'Lâmpada LED 12W',        'un', 22.00,  'Bivolt, 6500K'),
+  bt('Iluminação', 'Spot LED embutir 7W',    'un', 45.00,  'Bivolt, 4000K'),
+  bt('Iluminação', 'Luminária sobrepor 40W', 'un', 120.00, 'Fluorescente'),
+  bt('Iluminação', 'Refletor LED 20W',       'un', 65.00,  'IP65, externo'),
+  bt('Iluminação', 'Painel LED 36W',         'un', 95.00,  '60×60cm, 4000K'),
+  // ── BT: Tomadas e Interruptores ────────────────────────────────────────────
+  bt('Tomadas e Interruptores', 'Tomada 10A NBR 14136',  'un', 15.00, 'Padrão brasileiro'),
+  bt('Tomadas e Interruptores', 'Tomada 20A NBR 14136',  'un', 25.00, 'Padrão brasileiro'),
+  bt('Tomadas e Interruptores', 'Interruptor simples',   'un', 12.00, '10A, 250V'),
+  bt('Tomadas e Interruptores', 'Interruptor paralelo',  'un', 18.00, '10A, 250V'),
+  bt('Tomadas e Interruptores', 'Interruptor three-way', 'un', 22.00, '10A, 250V'),
+  // ── BT: Proteção ───────────────────────────────────────────────────────────
+  bt('Proteção', 'Disjuntor 10A (mono)',  'un', 22.00, 'Curva C'),
+  bt('Proteção', 'Disjuntor 16A (mono)',  'un', 23.00, 'Curva C'),
+  bt('Proteção', 'Disjuntor 20A (mono)',  'un', 24.00, 'Curva C'),
+  bt('Proteção', 'Disjuntor 32A (mono)',  'un', 28.00, 'Curva C'),
+  bt('Proteção', 'Disjuntor 40A (bi)',    'un', 55.00, 'Curva C'),
+  bt('Proteção', 'DR 25A (bipolar)',      'un', 85.00, '30mA, classe AC'),
+  bt('Proteção', 'DPS classe II',         'un', 65.00, 'Protetor de surto'),
+  // ── BT: Eletrodutos e Caixas ───────────────────────────────────────────────
+  bt('Eletrodutos e Caixas', 'Eletroduto PVC 3/4"',             'm',  4.50,  ''),
+  bt('Eletrodutos e Caixas', 'Eletroduto PVC 1"',               'm',  6.80,  ''),
+  bt('Eletrodutos e Caixas', 'Caixa passagem 4×2"',             'un', 3.50,  ''),
+  bt('Eletrodutos e Caixas', 'Caixa passagem 4×4"',             'un', 5.00,  ''),
+  bt('Eletrodutos e Caixas', 'Quadro de distribuição 12 disj.', 'un', 85.00, ''),
+  bt('Eletrodutos e Caixas', 'Quadro de distribuição 24 disj.', 'un', 140.00,''),
+  // ── BT: Mão de Obra ────────────────────────────────────────────────────────
+  bt('Mão de Obra', 'Hora técnica (eletricista)',    'h',  80.00,  'Residencial'),
+  bt('Mão de Obra', 'Ponto elétrico (tomada)',       'un', 150.00, 'Inclui material básico'),
+  bt('Mão de Obra', 'Ponto de iluminação',           'un', 130.00, 'Inclui material básico'),
+  bt('Mão de Obra', 'Instalação de disjuntor',       'un', 60.00,  ''),
+  bt('Mão de Obra', 'Instalação de luminária',       'un', 70.00,  ''),
+  bt('Mão de Obra', 'Passagem de cabo (por metro)',  'm',  12.00,  ''),
+  // ── AT: Transformadores ────────────────────────────────────────────────────
+  at('Transformadores', 'Trafo a seco 75 kVA  13,8kV/380V',  'un', 18500.00, 'IP23, classe F'),
+  at('Transformadores', 'Trafo a seco 150 kVA 13,8kV/380V',  'un', 24000.00, 'IP23, classe F'),
+  at('Transformadores', 'Trafo a seco 300 kVA 13,8kV/380V',  'un', 38000.00, 'IP23, classe F'),
+  at('Transformadores', 'Trafo a seco 500 kVA 13,8kV/380V',  'un', 58000.00, 'IP23, classe F'),
+  at('Transformadores', 'Trafo a seco 1000 kVA 13,8kV/380V', 'un', 98000.00, 'IP23, classe F'),
+  // ── AT: Chaves e Seccionadores ─────────────────────────────────────────────
+  at('Chaves e Seccionadores', 'Seccionadora fusível 15kV 100A',   'un', 4200.00, 'Uso interno'),
+  at('Chaves e Seccionadores', 'Seccionadora fusível 15kV 200A',   'un', 5800.00, 'Uso interno'),
+  at('Chaves e Seccionadores', 'Chave a óleo 15kV 630A',           'un', 12000.00,'Uso externo'),
+  at('Chaves e Seccionadores', 'Religador automático 15kV',        'un', 45000.00,'Monofásico'),
+  // ── AT: Para-Raios e DPS ──────────────────────────────────────────────────
+  at('Para-Raios e DPS', 'Para-raio ZnO 12kV 5kA',  'un', 380.00,  'Polimérico'),
+  at('Para-Raios e DPS', 'Para-raio ZnO 15kV 5kA',  'un', 420.00,  'Polimérico'),
+  at('Para-Raios e DPS', 'Para-raio ZnO 36kV 5kA',  'un', 680.00,  'Polimérico'),
+  at('Para-Raios e DPS', 'DPS classe I 150kA',       'un', 1200.00, 'Linha principal'),
+  // ── AT: Cabos AT ──────────────────────────────────────────────────────────
+  at('Cabos AT', 'Cabo 15kV 50mm² XLPE',  'm', 85.00,  'Isolação XLPE'),
+  at('Cabos AT', 'Cabo 15kV 95mm² XLPE',  'm', 145.00, 'Isolação XLPE'),
+  at('Cabos AT', 'Cabo 15kV 150mm² XLPE', 'm', 220.00, 'Isolação XLPE'),
+  at('Cabos AT', 'Cabo 15kV 240mm² XLPE', 'm', 350.00, 'Isolação XLPE'),
+  // ── AT: Cubículos MT ──────────────────────────────────────────────────────
+  at('Cubículos MT', 'Cubículo de medição 15kV',     'un', 32000.00, 'Padrão concessionária'),
+  at('Cubículos MT', 'Cubículo de proteção 15kV',    'un', 28000.00, 'Com disjuntor a vácuo'),
+  at('Cubículos MT', 'Cubículo de entrada 15kV',     'un', 18000.00, 'Com seccionadora'),
+  at('Cubículos MT', 'Painel MT completo (3 cubíc.)', 'un', 95000.00,'Medição+Proteção+Entrada'),
 ];
 
 export async function loadItems(): Promise<Item[] | null> {
@@ -74,7 +120,9 @@ export async function loadItems(): Promise<Item[] | null> {
     const fileExists = await exists(FILE, { baseDir: BASE });
     if (!fileExists) return null;
     const raw = await readTextFile(FILE, { baseDir: BASE });
-    return JSON.parse(raw) as Item[];
+    const parsed = JSON.parse(raw) as Item[];
+    // Backward compat: items sem voltage field recebem 'BT'
+    return parsed.map((it) => (it.voltage ? it : { ...it, voltage: 'BT' as const }));
   } catch {
     return null;
   }

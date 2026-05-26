@@ -73,7 +73,7 @@ export function SettingsModal() {
       className="fixed inset-0 z-50 flex items-center justify-center backdrop-blur-sm bg-black/70"
       onMouseDown={(e) => { if (e.target === e.currentTarget) toggleSettings(); }}
     >
-      <div className="w-full max-w-lg mx-4 bg-zinc-900 border border-zinc-800 rounded-lg shadow-2xl max-h-[92vh] flex flex-col
+      <div className="w-[85vw] max-w-5xl mx-4 bg-zinc-900 border border-zinc-800 rounded-lg shadow-2xl max-h-[92vh] flex flex-col
         animate-[modalIn_0.2s_ease-out]">
 
         {/* Header */}
@@ -84,101 +84,57 @@ export function SettingsModal() {
           <h2 className="text-base font-semibold text-zinc-100">Configurações</h2>
         </div>
 
-        {/* Body — scrollável */}
-        <div className="overflow-y-auto flex-1 px-6 py-5 flex flex-col gap-6">
+        {/* Body — 2 colunas */}
+        <div className="overflow-y-auto flex-1 grid grid-cols-2 divide-x divide-zinc-800">
 
-          {/* ── Identidade ── */}
-          <section>
-            <SectionTitle>Identidade</SectionTitle>
-            <div className="flex flex-col gap-3">
-              <Field
-                label="Seu nome"
-                value={form.userName}
-                placeholder="ex: João Alves"
-                onChange={(v) => patch('userName', v)}
-              />
-              <Field
-                label="Nome da empresa"
-                value={form.companyName}
-                placeholder="ex: JA Elétrica Ltda."
-                onChange={(v) => patch('companyName', v)}
-              />
-            </div>
-          </section>
-
-          {/* ── Logo ── */}
-          <section>
-            <SectionTitle>Logo da empresa</SectionTitle>
-            <div className="flex items-center gap-2">
-              <div className="flex-1 px-3 py-2 text-sm bg-zinc-950 border border-zinc-700 rounded text-zinc-500 truncate min-w-0">
-                {form.logoPath
-                  ? form.logoPath.split(/[\\/]/).pop()
-                  : 'Nenhum arquivo selecionado'}
+          {/* ── Coluna esquerda: Empresa ── */}
+          <div className="px-6 py-5 flex flex-col gap-6">
+            <section>
+              <SectionTitle>Identidade</SectionTitle>
+              <div className="flex flex-col gap-3">
+                <Field label="Seu nome" value={form.userName} placeholder="ex: João Alves" onChange={(v) => patch('userName', v)} />
+                <Field label="Nome da empresa" value={form.companyName} placeholder="ex: JA Elétrica Ltda." onChange={(v) => patch('companyName', v)} />
               </div>
-              <button
-                onClick={pickLogo}
-                className="shrink-0 px-3 py-2 text-xs font-medium bg-zinc-800 border border-zinc-700 rounded text-zinc-300 hover:bg-zinc-700 hover:text-zinc-100 transition-colors"
-              >
-                Escolher
-              </button>
-              {form.logoPath && (
-                <button
-                  onClick={() => patch('logoPath', '')}
-                  className="shrink-0 text-zinc-600 hover:text-red-400 transition-colors text-xs px-1"
-                  title="Remover logo"
-                >
-                  ✕
+            </section>
+
+            <section>
+              <SectionTitle>Logo da empresa</SectionTitle>
+              <div className="flex items-center gap-2">
+                <div className="flex-1 px-3 py-2 text-sm bg-zinc-950 border border-zinc-700 rounded text-zinc-500 truncate min-w-0">
+                  {form.logoPath ? form.logoPath.split(/[\\/]/).pop() : 'Nenhum arquivo selecionado'}
+                </div>
+                <button onClick={pickLogo} className="shrink-0 px-3 py-2 text-xs font-medium bg-zinc-800 border border-zinc-700 rounded text-zinc-300 hover:bg-zinc-700 hover:text-zinc-100 transition-colors">
+                  Escolher
                 </button>
-              )}
-            </div>
-          </section>
+                {form.logoPath && (
+                  <button onClick={() => patch('logoPath', '')} className="shrink-0 text-zinc-600 hover:text-red-400 transition-colors text-xs px-1" title="Remover logo">✕</button>
+                )}
+              </div>
+            </section>
 
-          {/* ── Cor principal ── */}
-          <section>
-            <SectionTitle>Cor principal</SectionTitle>
-            <div className="flex items-center gap-3">
-              <input
-                type="color"
-                value={form.primaryColor}
-                onChange={(e) => patch('primaryColor', e.target.value)}
-                className="w-10 h-10 rounded cursor-pointer border border-zinc-700 bg-zinc-950 p-0.5 shrink-0"
-              />
-              <input
-                type="text"
-                value={form.primaryColor}
-                onChange={(e) => patch('primaryColor', e.target.value)}
-                maxLength={7}
-                placeholder="#0ea5e9"
-                className="w-28 shrink-0 px-3 py-2 text-sm bg-zinc-950 border border-zinc-700 rounded text-zinc-100 placeholder:text-zinc-600 outline-none focus:border-zinc-500 transition-colors font-mono"
-              />
-              <div
-                className="flex-1 h-10 rounded border border-zinc-700/50 transition-colors"
-                style={{ backgroundColor: form.primaryColor }}
-              />
-            </div>
-          </section>
+            <section>
+              <SectionTitle>Cor principal</SectionTitle>
+              <div className="flex items-center gap-3">
+                <input type="color" value={form.primaryColor} onChange={(e) => patch('primaryColor', e.target.value)} className="w-10 h-10 rounded cursor-pointer border border-zinc-700 bg-zinc-950 p-0.5 shrink-0" />
+                <input type="text" value={form.primaryColor} onChange={(e) => patch('primaryColor', e.target.value)} maxLength={7} placeholder="#0ea5e9" className="w-28 shrink-0 px-3 py-2 text-sm bg-zinc-950 border border-zinc-700 rounded text-zinc-100 placeholder:text-zinc-600 outline-none focus:border-zinc-500 transition-colors font-mono" />
+                <div className="flex-1 h-10 rounded border border-zinc-700/50 transition-colors" style={{ backgroundColor: form.primaryColor }} />
+              </div>
+            </section>
+          </div>
 
-          {/* ── Assinatura padrão ── */}
-          <section>
-            <SectionTitle>Assinatura padrão</SectionTitle>
-            <p className="text-[10px] text-zinc-600 mb-3 leading-relaxed">
-              Preencherá automaticamente novos blocos de assinatura.
-            </p>
-            <div className="flex flex-col gap-3">
-              <Field
-                label="Nome completo"
-                value={form.defaultSignatureName}
-                placeholder="ex: João Alves"
-                onChange={(v) => patch('defaultSignatureName', v)}
-              />
-              <Field
-                label="Cargo / Registro"
-                value={form.defaultSignatureRole}
-                placeholder="ex: Eng. Elétrico — CREA-SP 123456/D"
-                onChange={(v) => patch('defaultSignatureRole', v)}
-              />
-            </div>
-          </section>
+          {/* ── Coluna direita: Assinatura ── */}
+          <div className="px-6 py-5 flex flex-col gap-6">
+            <section>
+              <SectionTitle>Assinatura padrão</SectionTitle>
+              <p className="text-[10px] text-zinc-600 mb-3 leading-relaxed">
+                Preencherá automaticamente novos blocos de assinatura.
+              </p>
+              <div className="flex flex-col gap-3">
+                <Field label="Nome completo" value={form.defaultSignatureName} placeholder="ex: João Alves" onChange={(v) => patch('defaultSignatureName', v)} />
+                <Field label="Cargo / Registro" value={form.defaultSignatureRole} placeholder="ex: Eng. Elétrico — CREA-SP 123456/D" onChange={(v) => patch('defaultSignatureRole', v)} />
+              </div>
+            </section>
+          </div>
         </div>
 
         {/* Footer */}

@@ -156,18 +156,20 @@ export function Canvas() {
               {doc.status === 'completed' ? 'Concluído' : 'Em execução'}
             </button>
 
-            {/* Modo Comercial */}
-            <button
-              onClick={() => toggleCommercialMode(doc.id)}
-              title={doc.isCommercialMode ? 'PDF mostra apenas resumo financeiro' : 'PDF mostra relatório completo'}
-              className={`text-xs px-2.5 py-1 rounded-full font-medium border transition-colors ${
-                doc.isCommercialMode
-                  ? 'bg-green-50 text-green-700 border-green-200 dark:bg-green-950 dark:text-green-400 dark:border-green-900'
-                  : 'text-zinc-400 border-zinc-200 dark:text-zinc-500 dark:border-zinc-700 hover:border-zinc-400 dark:hover:border-zinc-500'
-              }`}
-            >
-              {doc.isCommercialMode ? '🔒 Comercial' : '📋 Técnico'}
-            </button>
+            {/* Modo Comercial — só para documentos com tabelas de orçamento */}
+            {doc.type !== 'load-report' && (
+              <button
+                onClick={() => toggleCommercialMode(doc.id)}
+                title={doc.isCommercialMode ? 'PDF mostra apenas resumo financeiro' : 'PDF mostra relatório completo'}
+                className={`text-xs px-2.5 py-1 rounded-full font-medium border transition-colors ${
+                  doc.isCommercialMode
+                    ? 'bg-green-50 text-green-700 border-green-200 dark:bg-green-950 dark:text-green-400 dark:border-green-900'
+                    : 'text-zinc-400 border-zinc-200 dark:text-zinc-500 dark:border-zinc-700 hover:border-zinc-400 dark:hover:border-zinc-500'
+                }`}
+              >
+                {doc.isCommercialMode ? '🔒 Comercial' : '📋 Técnico'}
+              </button>
+            )}
 
             {/* Salvar no computador */}
             <div className="relative" ref={saveMenuRef}>
@@ -257,7 +259,7 @@ export function Canvas() {
 
             {/* Barra de adição */}
             <div className="mt-8 pt-4 border-t border-zinc-100 dark:border-zinc-800">
-              <AddBlockBar onAdd={(type) => addBlock(doc.id, type)} />
+              <AddBlockBar onAdd={(type) => addBlock(doc.id, type)} docType={doc.type} />
             </div>
           </div>
         </div>
@@ -268,23 +270,26 @@ export function Canvas() {
 
 // ─── Barra de adição ──────────────────────────────────────────────────────────
 
-const QUICK_BLOCKS: { type: BlockType; label: string }[] = [
+const ALL_QUICK_BLOCKS: { type: BlockType; label: string; onlyFor?: string[] }[] = [
   { type: 'paragraph',       label: '¶ Parágrafo' },
   { type: 'heading',         label: 'H Título' },
-  { type: 'table',           label: '⊞ Tabela' },
-  { type: 'callout',         label: '⚠ Aviso' },
+  { type: 'table',           label: '⊞ Tabela',   onlyFor: ['blank'] },
+  { type: 'callout',         label: '⚠ Aviso',    onlyFor: ['blank'] },
   { type: 'divider',         label: '― Divisor' },
   { type: 'signature',       label: '✎ Assinatura' },
   { type: 'image',           label: '📷 Foto' },
-  { type: 'finance-summary', label: '💰 Resumo' },
-  { type: 'load-report',    label: '⚡ Carga' },
+  { type: 'finance-summary', label: '💰 Resumo',  onlyFor: ['blank'] },
+  { type: 'load-report',     label: '⚡ Carga' },
 ];
 
-function AddBlockBar({ onAdd }: { onAdd: (type: BlockType) => void }) {
+function AddBlockBar({ onAdd, docType }: { onAdd: (type: BlockType) => void; docType: string }) {
+  const visible = ALL_QUICK_BLOCKS.filter(
+    (b) => !b.onlyFor || b.onlyFor.includes(docType),
+  );
   return (
     <div className="flex flex-wrap gap-2">
       <span className="text-xs text-zinc-300 dark:text-zinc-600 self-center mr-1">Adicionar bloco:</span>
-      {QUICK_BLOCKS.map(({ type, label }) => (
+      {visible.map(({ type, label }) => (
         <button
           key={type}
           onClick={() => onAdd(type)}
