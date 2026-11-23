@@ -7,6 +7,25 @@ permissão (nem `INTERNET`), então os arquivos nunca saem do aparelho.
 **APK pronto para instalar:** [`release/PDFLeitor.apk`](release/PDFLeitor.apk)
 (Android 5.0 ou superior, ~200 KB).
 
+![Telas do PDF Leitor](docs/telas.png)
+
+## Design — "Papel & Tinta"
+
+Estética editorial e tátil, feita à mão sem bibliotecas de UI:
+
+- **Tipografia:** Instrument Serif (títulos grandes, com palavras em itálico no tom de destaque),
+  Inter Tight (interface) e JetBrains Mono (rótulos em caixa alta no estilo índice: `01 — BIBLIOTECA`).
+  Fontes OFL embutidas em `assets/fonts`.
+- **Cor:** fundo cor de papel `#F3F0E9`, tinta `#141412` e um único acento vermelhão `#FF4F1F`;
+  tema escuro com tinta profunda e a barra inferior invertida em creme. Etiquetas de formato coloridas
+  em forma de arquivo com canto dobrado.
+- **Componentes próprios:** barra inferior flutuante em cápsula com pílula que desliza e se expande,
+  controles segmentados com indicador animado, interruptores desenhados à mão, painéis que sobem de
+  baixo (no lugar dos diálogos padrão), avisos em cápsula, carregador em linha, selo de sucesso animado
+  e ilustração de folhas flutuantes no estado vazio.
+- **Movimento:** curva `cubic-bezier(0.2, 0, 0, 1)` em todo o app; entradas escalonadas, transição
+  lateral entre abas, contadores animados e leve encolhimento ao toque.
+
 ## Telas (barra inferior)
 
 | Aba | O que faz |

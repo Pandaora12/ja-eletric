@@ -1,19 +1,16 @@
 package br.pdfleitor.app;
 
-import android.app.AlertDialog;
 import android.content.ClipData;
 import android.content.Context;
-import android.content.DialogInterface;
 import android.content.Intent;
-import android.graphics.Typeface;
 import android.net.Uri;
 import android.text.TextUtils;
 import android.view.Gravity;
 import android.view.View;
 import android.view.ViewGroup;
+import android.widget.FrameLayout;
 import android.widget.ImageView;
 import android.widget.LinearLayout;
-import android.widget.ProgressBar;
 import android.widget.ScrollView;
 import android.widget.TextView;
 
@@ -29,24 +26,23 @@ import java.util.List;
 import br.pdfleitor.core.Format;
 import br.pdfleitor.core.Util;
 
-/** Aba "Converter": conversão entre PDF, Word, PowerPoint, Excel, imagens e mais. */
+/** Aba "Converter". */
 public class ConvertPage extends ScrollView {
 
-    /** Atalho de conversão. */
     private static final class Tool {
-        final String title, sub;
+        final String from, to, title, sub;
         final String[] mimes;
         final Format target;
         final boolean multi;
-        final int color;
 
-        Tool(String title, String sub, String[] mimes, Format target, boolean multi, int color) {
+        Tool(String from, String to, String title, String sub, String[] mimes, Format target, boolean multi) {
+            this.from = from;
+            this.to = to;
             this.title = title;
             this.sub = sub;
             this.mimes = mimes;
             this.target = target;
             this.multi = multi;
-            this.color = color;
         }
     }
 
@@ -57,172 +53,160 @@ public class ConvertPage extends ScrollView {
     private static final String[] IMG = {"image/*"};
     private static final String[] WEB = {"text/html", "text/plain", "text/markdown", "text/x-markdown", "application/octet-stream"};
     private static final String[] EBOOK = {Format.EPUB.mime};
-
-    private static final int C_WORD = 0xFF2B579A, C_PDF = 0xFFD93025, C_PPT = 0xFFD24726, C_XLS = 0xFF217346,
-            C_IMG = 0xFF8E44AD, C_TXT = 0xFF5F6368, C_WEB = 0xFF0B8043;
+    private static final String[] PDFM = {M_PDF};
 
     private final Tool[] tools = {
-            new Tool("Word → PDF", "DOCX, ODT, RTF", WORD, Format.PDF, false, C_WORD),
-            new Tool("PDF → Word", "Texto editável", new String[]{M_PDF}, Format.DOCX, false, C_PDF),
-            new Tool("PowerPoint → PDF", "PPTX, ODP", PPT, Format.PDF, false, C_PPT),
-            new Tool("PDF → PowerPoint", "Um slide por página", new String[]{M_PDF}, Format.PPTX, false, C_PDF),
-            new Tool("Excel → PDF", "XLSX, ODS, CSV", XLS, Format.PDF, false, C_XLS),
-            new Tool("PDF → Excel", "Tabelas e texto", new String[]{M_PDF}, Format.XLSX, false, C_PDF),
-            new Tool("Imagens → PDF", "JPG, PNG, WEBP…", IMG, Format.PDF, true, C_IMG),
-            new Tool("PDF → JPG", "Uma imagem por página", new String[]{M_PDF}, Format.JPG, false, C_PDF),
-            new Tool("PowerPoint → Word", "Slides em documento", PPT, Format.DOCX, false, C_PPT),
-            new Tool("Excel → Word", "Planilha em tabela", XLS, Format.DOCX, false, C_XLS),
-            new Tool("Word → PowerPoint", "Títulos viram slides", WORD, Format.PPTX, false, C_WORD),
-            new Tool("Word → Excel", "Tabelas do documento", WORD, Format.XLSX, false, C_WORD),
-            new Tool("PowerPoint → Imagens", "PNG de cada slide", PPT, Format.PNG, false, C_PPT),
-            new Tool("PDF → Texto", "TXT simples", new String[]{M_PDF}, Format.TXT, false, C_PDF),
-            new Tool("HTML / Markdown → PDF", "Páginas e notas", WEB, Format.PDF, false, C_WEB),
-            new Tool("EPUB → PDF", "eBooks", EBOOK, Format.PDF, false, C_TXT),
+            new Tool("doc", "pdf", "Word → PDF", "DOCX · ODT · RTF", WORD, Format.PDF, false),
+            new Tool("pdf", "doc", "PDF → Word", "Texto editável", PDFM, Format.DOCX, false),
+            new Tool("img", "pdf", "Imagens → PDF", "Junte várias fotos", IMG, Format.PDF, true),
+            new Tool("ppt", "pdf", "PowerPoint → PDF", "PPTX · ODP", PPT, Format.PDF, false),
+            new Tool("pdf", "ppt", "PDF → PowerPoint", "Página a página", PDFM, Format.PPTX, false),
+            new Tool("xls", "pdf", "Excel → PDF", "XLSX · ODS · CSV", XLS, Format.PDF, false),
+            new Tool("pdf", "xls", "PDF → Excel", "Tabelas e texto", PDFM, Format.XLSX, false),
+            new Tool("pdf", "jpg", "PDF → JPG", "Página a página", PDFM, Format.JPG, false),
+            new Tool("ppt", "doc", "PowerPoint → Word", "Slides em texto", PPT, Format.DOCX, false),
+            new Tool("xls", "doc", "Excel → Word", "Planilha em tabela", XLS, Format.DOCX, false),
+            new Tool("doc", "ppt", "Word → PowerPoint", "Títulos → slides", WORD, Format.PPTX, false),
+            new Tool("doc", "xls", "Word → Excel", "Só as tabelas", WORD, Format.XLSX, false),
+            new Tool("ppt", "png", "PowerPoint → PNG", "Slide a slide", PPT, Format.PNG, false),
+            new Tool("pdf", "txt", "PDF → Texto", "Somente o texto", PDFM, Format.TXT, false),
+            new Tool("web", "pdf", "HTML/MD → PDF", "Páginas e notas", WEB, Format.PDF, false),
+            new Tool("epub", "pdf", "EPUB → PDF", "eBooks", EBOOK, Format.PDF, false),
     };
 
     private final MainActivity act;
-    private final LinearLayout col;
-    private final LinearLayout sourceCard, sourceInfo, progressBox, resultBox, outputsList;
-    private final FlowLayout targetChips;
-    private final TextView convertBtn, progressText, chooseBtn, outputsEmpty;
+    private final FrameLayout stage;
+    private final LinearLayout outputsList;
+    private final TextView outputsEmpty;
     private final List<Converter.Source> sources = new ArrayList<Converter.Source>();
     private Format target;
     private Tool pendingTool;
     private Converter running;
-    private File lastResult, saveAsFile;
+    private File saveAsFile;
+    private TextView progressText, convertBtn;
+    private View progressBox;
+    private FlowLayout chips;
 
     public ConvertPage(MainActivity a) {
         super(a);
         act = a;
         setBackgroundColor(Ui.BG);
         setFillViewport(true);
-        col = new LinearLayout(a);
+        setVerticalScrollBarEnabled(false);
+        setOverScrollMode(OVER_SCROLL_NEVER);
+        LinearLayout col = new LinearLayout(a);
         col.setOrientation(LinearLayout.VERTICAL);
-        int side = Ui.dp(a, 16);
-        col.setPadding(side, Ui.dp(a, 20), side, Ui.dp(a, 32));
+        int side = Ui.dp(a, 20);
+        col.setPadding(side, Ui.dp(a, 28), side, Ui.dp(a, 130));
         addView(col, new LayoutParams(-1, -2));
 
-        TextView title = Ui.title(a, "Converter");
-        title.setPadding(Ui.dp(a, 4), 0, 0, 0);
-        col.addView(title);
-        TextView subtitle = Ui.text(a, "Tudo acontece no seu aparelho, sem internet e sem cadastro.", 14, Ui.TEXT2, false);
-        subtitle.setPadding(Ui.dp(a, 4), 0, 0, Ui.dp(a, 6));
-        col.addView(subtitle);
+        col.addView(Ui.header(a, "02 — Conversor", "Converta\n*qualquer* coisa.",
+                "Word, PDF, PowerPoint, Excel, imagens e mais. Tudo acontece no aparelho — sem internet, sem cadastro."));
 
-        // cartão de conversão livre
-        sourceCard = Ui.card(a);
-        TextView ct = Ui.text(a, "Qualquer formato para qualquer formato", 16, Ui.TEXT, true);
-        sourceCard.addView(ct);
-        TextView cs = Ui.text(a, "PDF, Word, PowerPoint, Excel, OpenDocument, imagens, HTML, Markdown, TXT, CSV, RTF e EPUB.", 13.5f, Ui.TEXT2, false);
-        cs.setPadding(0, Ui.dp(a, 4), 0, Ui.dp(a, 12));
-        sourceCard.addView(cs);
-        sourceInfo = new LinearLayout(a);
-        sourceInfo.setOrientation(LinearLayout.VERTICAL);
-        sourceCard.addView(sourceInfo);
-        targetChips = new FlowLayout(a, Ui.dp(a, 8));
-        targetChips.setVisibility(GONE);
-        sourceCard.addView(targetChips, Ui.lpMargins(-1, -2, 0, Ui.dp(a, 4), 0, Ui.dp(a, 12)));
-        LinearLayout btns = new LinearLayout(a);
-        btns.setOrientation(LinearLayout.HORIZONTAL);
-        chooseBtn = Ui.button(a, "Escolher arquivo", false);
-        chooseBtn.setOnClickListener(new OnClickListener() {
-            @Override
-            public void onClick(View v) {
-                pendingTool = null;
-                pick(new String[]{"*/*"}, true);
-            }
-        });
-        btns.addView(chooseBtn, new LinearLayout.LayoutParams(0, -2, 1));
-        convertBtn = Ui.button(a, "Converter", true);
-        convertBtn.setVisibility(GONE);
-        convertBtn.setOnClickListener(new OnClickListener() {
-            @Override
-            public void onClick(View v) {
-                startConversion();
-            }
-        });
-        btns.addView(convertBtn, Ui.lpMargins(0, -2, Ui.dp(a, 10), 0, 0, 0));
-        ((LinearLayout.LayoutParams) convertBtn.getLayoutParams()).weight = 1;
-        sourceCard.addView(btns);
+        stage = new FrameLayout(a);
+        col.addView(stage, Ui.lpMargins(-1, -2, 0, Ui.dp(a, 26), 0, 0));
+        showIdle();
 
-        progressBox = new LinearLayout(a);
-        progressBox.setOrientation(LinearLayout.HORIZONTAL);
-        progressBox.setGravity(Gravity.CENTER_VERTICAL);
-        progressBox.setPadding(0, Ui.dp(a, 14), 0, 0);
-        progressBox.setVisibility(GONE);
-        ProgressBar pb = new ProgressBar(a);
-        progressBox.addView(pb, new LinearLayout.LayoutParams(Ui.dp(a, 28), Ui.dp(a, 28)));
-        progressText = Ui.text(a, "", 14, Ui.TEXT, false);
-        progressText.setPadding(Ui.dp(a, 12), 0, Ui.dp(a, 8), 0);
-        progressBox.addView(progressText, new LinearLayout.LayoutParams(0, -2, 1));
-        TextView cancel = Ui.text(a, "Cancelar", 14, Ui.PRIMARY, true);
-        cancel.setPadding(Ui.dp(a, 8), Ui.dp(a, 8), Ui.dp(a, 8), Ui.dp(a, 8));
-        cancel.setOnClickListener(new OnClickListener() {
-            @Override
-            public void onClick(View v) {
-                if (running != null) running.cancel();
-            }
-        });
-        progressBox.addView(cancel);
-        sourceCard.addView(progressBox);
-
-        resultBox = new LinearLayout(a);
-        resultBox.setOrientation(LinearLayout.VERTICAL);
-        resultBox.setVisibility(GONE);
-        sourceCard.addView(resultBox);
-        col.addView(sourceCard, Ui.lpMargins(-1, -2, 0, Ui.dp(a, 12), 0, 0));
-
-        // atalhos
-        col.addView(Ui.section(a, "Conversões rápidas"));
+        // atalhos em grade "bento"
+        col.addView(Ui.section(a, "Atalhos"));
+        col.addView(bigTool(tools[0]), Ui.lpMargins(-1, -2, 0, 0, 0, Ui.dp(a, 10)));
         LinearLayout row = null;
-        for (int i = 0; i < tools.length; i++) {
-            if (i % 2 == 0) {
+        for (int i = 1; i < tools.length; i++) {
+            int k = i - 1;
+            if (k % 2 == 0) {
                 row = new LinearLayout(a);
                 row.setOrientation(LinearLayout.HORIZONTAL);
                 col.addView(row, Ui.lpMargins(-1, -2, 0, 0, 0, Ui.dp(a, 10)));
             }
-            View card = toolCard(tools[i]);
-            row.addView(card, Ui.lpMargins(0, -1, i % 2 == 1 ? Ui.dp(a, 10) : 0, 0, 0, 0));
-            ((LinearLayout.LayoutParams) card.getLayoutParams()).weight = 1;
+            View card = smallTool(tools[i], k < 2);
+            LinearLayout.LayoutParams lp = Ui.lpMargins(0, -1, k % 2 == 1 ? Ui.dp(a, 10) : 0, 0, 0, 0);
+            lp.weight = 1;
+            row.addView(card, lp);
         }
 
-        // arquivos convertidos
-        col.addView(Ui.section(a, "Arquivos convertidos"));
+        col.addView(Ui.section(a, "Convertidos recentemente"));
         outputsList = new LinearLayout(a);
         outputsList.setOrientation(LinearLayout.VERTICAL);
         col.addView(outputsList);
-        outputsEmpty = Ui.text(a, "Os arquivos que você converter aparecem aqui.", 14, Ui.TEXT2, false);
+        outputsEmpty = Ui.text(a, "Seus arquivos convertidos aparecem aqui.", 15, Ui.INK2, false);
         outputsEmpty.setPadding(Ui.dp(a, 4), 0, 0, 0);
         col.addView(outputsEmpty);
         refreshOutputs();
     }
 
-    private View toolCard(final Tool t) {
+    void onShown() {
+        refreshOutputs();
+    }
+
+    // ------------------------------------------------------------------ atalhos
+
+    private View bigTool(final Tool t) {
         LinearLayout c = new LinearLayout(act);
         c.setOrientation(LinearLayout.VERTICAL);
-        int r = Ui.dp(act, 16);
-        c.setBackground(Ui.ripple(Ui.rounded(Ui.SURFACE, r), r));
-        if (!Ui.dark) c.setElevation(Ui.dp(act, 1));
-        c.setPadding(Ui.dp(act, 14), Ui.dp(act, 14), Ui.dp(act, 12), Ui.dp(act, 14));
+        int r = Ui.dp(act, 28);
+        c.setBackground(Ui.ripple(Ui.rounded(Ui.DOCK, r), r));
+        c.setPadding(Ui.dp(act, 22), Ui.dp(act, 22), Ui.dp(act, 22), Ui.dp(act, 22));
         c.setClickable(true);
-        LinearLayout badges = new LinearLayout(act);
-        badges.setOrientation(LinearLayout.HORIZONTAL);
-        badges.setGravity(Gravity.CENTER_VERTICAL);
-        String[] parts = t.title.split(" → ");
-        badges.addView(badge(parts[0], t.color));
-        ImageView arrow = new ImageView(act);
-        arrow.setImageDrawable(Ui.icon(act, R.drawable.ic_arrow, Ui.TEXT2));
-        badges.addView(arrow, Ui.lpMargins(Ui.dp(act, 16), Ui.dp(act, 16), Ui.dp(act, 4), 0, Ui.dp(act, 4), 0));
-        badges.addView(badge(parts.length > 1 ? parts[1] : "", colorFor(t.target)));
-        c.addView(badges);
-        TextView tt = Ui.text(act, t.title, 14.5f, Ui.TEXT, true);
-        tt.setPadding(0, Ui.dp(act, 10), 0, 0);
-        tt.setMaxLines(2);
-        c.addView(tt);
-        TextView ts = Ui.text(act, t.sub, 12.5f, Ui.TEXT2, false);
-        ts.setSingleLine();
-        ts.setEllipsize(TextUtils.TruncateAt.END);
-        c.addView(ts);
+        LinearLayout top = new LinearLayout(act);
+        top.setOrientation(LinearLayout.HORIZONTAL);
+        top.setGravity(Gravity.CENTER_VERTICAL);
+        top.addView(new Widgets.FileTag(act, t.from), new LinearLayout.LayoutParams(Ui.dp(act, 44), Ui.dp(act, 54)));
+        TextView arrow = Ui.text(act, "→", 26, Ui.DOCK_MUTED, false);
+        arrow.setPadding(Ui.dp(act, 12), 0, Ui.dp(act, 12), 0);
+        top.addView(arrow);
+        top.addView(new Widgets.FileTag(act, t.to), new LinearLayout.LayoutParams(Ui.dp(act, 44), Ui.dp(act, 54)));
+        View sp = new View(act);
+        top.addView(sp, new LinearLayout.LayoutParams(0, 1, 1));
+        TextView badge = Ui.label(act, "Mais usado", Ui.ON_ACCENT);
+        badge.setBackground(Ui.rounded(Ui.ACCENT, Ui.dp(act, 12)));
+        badge.setPadding(Ui.dp(act, 10), Ui.dp(act, 6), Ui.dp(act, 10), Ui.dp(act, 6));
+        top.addView(badge);
+        c.addView(top);
+        TextView title = Ui.display(act, t.title, 40);
+        title.setTextColor(Ui.DOCK_INK);
+        title.setPadding(0, Ui.dp(act, 26), 0, 0);
+        c.addView(title);
+        TextView sub = Ui.label(act, t.sub, Ui.DOCK_MUTED);
+        sub.setPadding(0, Ui.dp(act, 10), 0, 0);
+        c.addView(sub);
+        bindTool(c, t);
+        Ui.press(c);
+        return c;
+    }
+
+    private View smallTool(final Tool t, boolean tall) {
+        LinearLayout c = new LinearLayout(act);
+        c.setOrientation(LinearLayout.VERTICAL);
+        int r = Ui.dp(act, 24);
+        c.setBackground(Ui.ripple(Ui.stroke(Ui.CARD, Ui.LINE, Math.max(1, Ui.dp(act, 0.8f)), r), r));
+        c.setPadding(Ui.dp(act, 16), Ui.dp(act, 16), Ui.dp(act, 14), Ui.dp(act, 16));
+        c.setClickable(true);
+        FrameLayout tags = new FrameLayout(act);
+        int tw = Ui.dp(act, tall ? 34 : 28), th = Ui.dp(act, tall ? 42 : 34);
+        Widgets.FileTag a = new Widgets.FileTag(act, t.from);
+        tags.addView(a, new FrameLayout.LayoutParams(tw, th));
+        Widgets.FileTag b = new Widgets.FileTag(act, t.to);
+        FrameLayout.LayoutParams blp = new FrameLayout.LayoutParams(tw, th);
+        blp.leftMargin = (int) (tw * 0.92f);
+        blp.topMargin = (int) (th * 0.18f);
+        b.setRotation(8);
+        a.setRotation(-6);
+        tags.addView(b, blp);
+        c.addView(tags, new LinearLayout.LayoutParams(-2, (int) (th * 1.3f)));
+        TextView title = Ui.text(act, t.title, tall ? 17 : 15, Ui.INK, true);
+        title.setPadding(0, Ui.dp(act, tall ? 22 : 16), 0, 0);
+        title.setMaxLines(2);
+        c.addView(title);
+        TextView sub = Ui.label(act, t.sub, Ui.INK2);
+        sub.setPadding(0, Ui.dp(act, 8), 0, 0);
+        sub.setEllipsize(TextUtils.TruncateAt.END);
+        c.addView(sub);
+        bindTool(c, t);
+        Ui.press(c);
+        return c;
+    }
+
+    private void bindTool(View c, final Tool t) {
         c.setOnClickListener(new OnClickListener() {
             @Override
             public void onClick(View v) {
@@ -234,36 +218,242 @@ public class ConvertPage extends ScrollView {
                 pick(t.mimes, t.multi);
             }
         });
-        return c;
     }
 
-    private static int colorFor(Format f) {
-        switch (f) {
-            case PDF: return C_PDF;
-            case DOCX: case ODT: case RTF: return C_WORD;
-            case PPTX: return C_PPT;
-            case XLSX: case ODS: case CSV: return C_XLS;
-            case JPG: case PNG: case WEBP: return C_IMG;
-            case HTML: case MD: return C_WEB;
-            default: return C_TXT;
+    // ------------------------------------------------------------------ palco
+
+    private void swapStage(View v) {
+        stage.removeAllViews();
+        stage.addView(v, new FrameLayout.LayoutParams(-1, -2));
+        Ui.enter(v, 0);
+    }
+
+    private void showIdle() {
+        LinearLayout c = new LinearLayout(act);
+        c.setOrientation(LinearLayout.VERTICAL);
+        c.setGravity(Gravity.CENTER_HORIZONTAL);
+        int r = Ui.dp(act, 28);
+        c.setBackground(Ui.ripple(Ui.dashed(Ui.CARD, Ui.INK3, Ui.dp(act, 1.4f), Ui.dp(act, 7), Ui.dp(act, 6), r), r));
+        c.setPadding(Ui.dp(act, 24), Ui.dp(act, 34), Ui.dp(act, 24), Ui.dp(act, 30));
+        c.setClickable(true);
+        ImageView plus = new ImageView(act);
+        plus.setImageDrawable(Ui.icon(act, R.drawable.ic_add, Ui.ON_ACCENT));
+        plus.setBackground(Ui.rounded(Ui.ACCENT, Ui.dp(act, 32)));
+        int p = Ui.dp(act, 18);
+        plus.setPadding(p, p, p, p);
+        plus.setElevation(Ui.dp(act, 6));
+        c.addView(plus, new LinearLayout.LayoutParams(Ui.dp(act, 64), Ui.dp(act, 64)));
+        TextView t = Ui.display(act, "Escolha um *arquivo*", 30);
+        t.setGravity(Gravity.CENTER);
+        t.setPadding(0, Ui.dp(act, 20), 0, 0);
+        c.addView(t);
+        TextView s = Ui.text(act, "Qualquer formato para qualquer formato. Para juntar fotos em um PDF, selecione várias imagens.", 14.5f, Ui.INK2, false);
+        s.setGravity(Gravity.CENTER);
+        s.setPadding(Ui.dp(act, 8), Ui.dp(act, 10), Ui.dp(act, 8), 0);
+        c.addView(s);
+        LinearLayout fmts = new LinearLayout(act);
+        fmts.setOrientation(LinearLayout.HORIZONTAL);
+        fmts.setPadding(0, Ui.dp(act, 22), 0, 0);
+        for (String e : new String[]{"pdf", "doc", "ppt", "xls", "img", "epub"}) {
+            Widgets.FileTag ft = new Widgets.FileTag(act, e);
+            fmts.addView(ft, Ui.lpMargins(Ui.dp(act, 30), Ui.dp(act, 37), Ui.dp(act, 4), 0, Ui.dp(act, 4), 0));
+        }
+        c.addView(fmts);
+        c.setOnClickListener(new OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                pendingTool = null;
+                pick(new String[]{"*/*"}, true);
+            }
+        });
+        Ui.press(c);
+        swapStage(c);
+    }
+
+    private LinearLayout fileRow(Converter.Source first, int count) {
+        LinearLayout row = new LinearLayout(act);
+        row.setOrientation(LinearLayout.HORIZONTAL);
+        row.setGravity(Gravity.CENTER_VERTICAL);
+        row.addView(new Widgets.FileTag(act, first.format.ext), new LinearLayout.LayoutParams(Ui.dp(act, 44), Ui.dp(act, 54)));
+        LinearLayout t = new LinearLayout(act);
+        t.setOrientation(LinearLayout.VERTICAL);
+        t.setPadding(Ui.dp(act, 14), 0, Ui.dp(act, 4), 0);
+        TextView n = Ui.text(act, count == 1 ? first.name : count + " imagens", 16.5f, Ui.INK, true);
+        n.setSingleLine();
+        n.setEllipsize(TextUtils.TruncateAt.MIDDLE);
+        t.addView(n);
+        long total = 0;
+        for (Converter.Source s : sources) total += Math.max(0, s.size);
+        TextView m = Ui.label(act, first.format.label + (total > 0 ? "  ·  " + Ui.size(total) : ""), Ui.INK2);
+        m.setPadding(0, Ui.dp(act, 8), 0, 0);
+        t.addView(m);
+        row.addView(t, new LinearLayout.LayoutParams(0, -2, 1));
+        return row;
+    }
+
+    private void showSelected() {
+        if (sources.isEmpty()) {
+            showIdle();
+            return;
+        }
+        LinearLayout c = Ui.card(act);
+        LinearLayout row = fileRow(sources.get(0), sources.size());
+        ImageView clear = Ui.circleButton(act, R.drawable.ic_close, Ui.CARD2, Ui.INK, 40, "Trocar arquivo");
+        clear.setOnClickListener(new OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                if (running != null) return;
+                sources.clear();
+                showIdle();
+            }
+        });
+        row.addView(clear);
+        c.addView(row);
+        c.addView(Ui.divider(act), Ui.lpMargins(-1, Math.max(1, Ui.dp(act, 0.8f)), 0, Ui.dp(act, 18), 0, Ui.dp(act, 16)));
+        c.addView(Ui.label(act, "Converter para", Ui.INK2));
+        chips = new FlowLayout(act, Ui.dp(act, 8));
+        c.addView(chips, Ui.lpMargins(-1, -2, 0, Ui.dp(act, 14), 0, Ui.dp(act, 20)));
+        fillChips();
+        convertBtn = Ui.button(act, "", true, true);
+        convertBtn.setOnClickListener(new OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                startConversion();
+            }
+        });
+        c.addView(convertBtn, new LinearLayout.LayoutParams(-1, -2));
+        LinearLayout pb = new LinearLayout(act);
+        pb.setOrientation(LinearLayout.VERTICAL);
+        pb.setVisibility(GONE);
+        pb.addView(new Widgets.LineLoader(act), Ui.lpMargins(-1, Ui.dp(act, 4), 0, Ui.dp(act, 8), 0, Ui.dp(act, 14)));
+        LinearLayout pr = new LinearLayout(act);
+        pr.setOrientation(LinearLayout.HORIZONTAL);
+        pr.setGravity(Gravity.CENTER_VERTICAL);
+        progressText = Ui.text(act, "Preparando…", 15, Ui.INK, false);
+        pr.addView(progressText, new LinearLayout.LayoutParams(0, -2, 1));
+        TextView cancel = Ui.label(act, "Cancelar", Ui.ACCENT);
+        cancel.setPadding(Ui.dp(act, 12), Ui.dp(act, 10), 0, Ui.dp(act, 10));
+        cancel.setOnClickListener(new OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                if (running != null) running.cancel();
+            }
+        });
+        pr.addView(cancel);
+        pb.addView(pr);
+        progressBox = pb;
+        c.addView(pb);
+        updateButton();
+        swapStage(c);
+    }
+
+    private void fillChips() {
+        chips.removeAllViews();
+        Format src = sources.get(0).format;
+        for (final Format f : Format.targetsFor(src)) {
+            TextView chip = Ui.text(act, f.label, 14, Ui.INK, true);
+            chip.setGravity(Gravity.CENTER);
+            chip.setPadding(Ui.dp(act, 16), 0, Ui.dp(act, 16), 0);
+            chip.setMinHeight(Ui.dp(act, 40));
+            int r = Ui.dp(act, 20);
+            boolean sel = f == target;
+            chip.setBackground(Ui.ripple(sel ? Ui.rounded(Ui.INK, r) : Ui.stroke(0, Ui.LINE, Math.max(1, Ui.dp(act, 1)), r), r));
+            chip.setTextColor(sel ? Ui.BG : Ui.INK);
+            chip.setOnClickListener(new OnClickListener() {
+                @Override
+                public void onClick(View v) {
+                    if (running != null) return;
+                    target = f;
+                    fillChips();
+                    updateButton();
+                }
+            });
+            chips.addView(chip);
         }
     }
 
-    private TextView badge(String label, int color) {
-        String s = label;
-        if (s.startsWith("PowerPoint")) s = "PPT";
-        else if (s.startsWith("Word")) s = "DOC";
-        else if (s.startsWith("Excel")) s = "XLS";
-        else if (s.startsWith("Imagens")) s = "IMG";
-        else if (s.startsWith("Texto")) s = "TXT";
-        else if (s.startsWith("HTML")) s = "WEB";
-        else if (s.length() > 4) s = s.substring(0, 4);
-        TextView b = Ui.text(act, s.toUpperCase(), 11, 0xFFFFFFFF, true);
-        b.setTypeface(Typeface.create("sans-serif-condensed", Typeface.BOLD));
-        b.setGravity(Gravity.CENTER);
-        b.setBackground(Ui.rounded(color, Ui.dp(act, 8)));
-        b.setLayoutParams(new LinearLayout.LayoutParams(Ui.dp(act, 40), Ui.dp(act, 30)));
-        return b;
+    private void updateButton() {
+        if (convertBtn != null && target != null) convertBtn.setText("Converter para " + target.label + "   →");
+    }
+
+    private void showResult(final Converter.Result r) {
+        final File f = r.file;
+        LinearLayout c = Ui.card(act);
+        LinearLayout head = new LinearLayout(act);
+        head.setOrientation(LinearLayout.HORIZONTAL);
+        head.setGravity(Gravity.CENTER_VERTICAL);
+        final Widgets.CheckMark check = new Widgets.CheckMark(act);
+        head.addView(check, new LinearLayout.LayoutParams(Ui.dp(act, 46), Ui.dp(act, 46)));
+        TextView done = Ui.display(act, "Pronto.", 36);
+        done.setPadding(Ui.dp(act, 14), 0, 0, 0);
+        head.addView(done);
+        c.addView(head);
+        LinearLayout file = new LinearLayout(act);
+        file.setOrientation(LinearLayout.HORIZONTAL);
+        file.setGravity(Gravity.CENTER_VERTICAL);
+        file.setBackground(Ui.rounded(Ui.CARD2, Ui.dp(act, 18)));
+        file.setPadding(Ui.dp(act, 12), Ui.dp(act, 12), Ui.dp(act, 14), Ui.dp(act, 12));
+        file.addView(new Widgets.FileTag(act, Util.extension(f.getName())), new LinearLayout.LayoutParams(Ui.dp(act, 36), Ui.dp(act, 44)));
+        LinearLayout t = new LinearLayout(act);
+        t.setOrientation(LinearLayout.VERTICAL);
+        t.setPadding(Ui.dp(act, 12), 0, 0, 0);
+        TextView n = Ui.text(act, f.getName(), 15.5f, Ui.INK, true);
+        n.setMaxLines(2);
+        n.setEllipsize(TextUtils.TruncateAt.MIDDLE);
+        t.addView(n);
+        String info = Ui.size(f.length()) + (r.publicUri != null ? "  ·  também em Downloads" : "");
+        TextView m = Ui.label(act, info, Ui.INK2);
+        m.setPadding(0, Ui.dp(act, 7), 0, 0);
+        t.addView(m);
+        file.addView(t, new LinearLayout.LayoutParams(0, -2, 1));
+        c.addView(file, Ui.lpMargins(-1, -2, 0, Ui.dp(act, 18), 0, Ui.dp(act, 16)));
+        TextView open = Ui.button(act, "Abrir", true);
+        open.setOnClickListener(new OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                Files.open(act, f);
+            }
+        });
+        c.addView(open, new LinearLayout.LayoutParams(-1, -2));
+        LinearLayout actions = new LinearLayout(act);
+        actions.setOrientation(LinearLayout.HORIZONTAL);
+        TextView share = Ui.button(act, "Enviar", false);
+        share.setOnClickListener(new OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                Files.share(act, Files.shareUri(act, f), Files.mimeOf(f.getName()), f.getName());
+            }
+        });
+        actions.addView(share, new LinearLayout.LayoutParams(0, -2, 1));
+        TextView save = Ui.button(act, "Salvar em…", false);
+        save.setOnClickListener(new OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                saveAs(f);
+            }
+        });
+        LinearLayout.LayoutParams slp = Ui.lpMargins(0, -2, Ui.dp(act, 10), 0, 0, 0);
+        slp.weight = 1;
+        actions.addView(save, slp);
+        c.addView(actions, Ui.lpMargins(-1, -2, 0, Ui.dp(act, 10), 0, 0));
+        TextView again = Ui.label(act, "Nova conversão  →", Ui.ACCENT);
+        again.setGravity(Gravity.CENTER);
+        again.setPadding(0, Ui.dp(act, 18), 0, Ui.dp(act, 4));
+        again.setOnClickListener(new OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                sources.clear();
+                showIdle();
+            }
+        });
+        c.addView(again, new LinearLayout.LayoutParams(-1, -2));
+        swapStage(c);
+        check.postDelayed(new Runnable() {
+            @Override
+            public void run() {
+                check.play();
+            }
+        }, 180);
     }
 
     // ------------------------------------------------------------------ seleção
@@ -294,12 +484,12 @@ public class ConvertPage extends ScrollView {
         if (pendingTool != null && !sources.isEmpty()) {
             target = pendingTool.target;
             pendingTool = null;
-            showTargets();
+            showSelected();
+            smoothScrollTo(0, 0);
             startConversion();
         }
     }
 
-    /** Arquivos vindos de outros apps (Compartilhar/Abrir com) ou do leitor. */
     void setExternalSources(List<Uri> uris, boolean fromApp) {
         pendingTool = null;
         setSources(uris);
@@ -307,87 +497,28 @@ public class ConvertPage extends ScrollView {
     }
 
     private void setSources(List<Uri> uris) {
+        if (running != null) {
+            Ui.toast(act, "Aguarde a conversão atual terminar.");
+            return;
+        }
         sources.clear();
-        resultBox.setVisibility(GONE);
         List<Converter.Source> list = new ArrayList<Converter.Source>();
         for (Uri u : uris) list.add(Converter.describe(act, u));
         boolean allImages = true;
         for (Converter.Source s : list) if (s.format == null || !s.format.isImage()) allImages = false;
         if (list.size() > 1 && !allImages) {
-            Ui.toast(act, "Vários arquivos só podem ser combinados quando todos são imagens. Usando o primeiro.");
+            Ui.toast(act, "Só imagens podem ser combinadas. Usando o primeiro arquivo.");
             sources.add(list.get(0));
         } else sources.addAll(list);
         Converter.Source first = sources.get(0);
         if (first.format == null || !first.format.canRead) {
             Ui.toast(act, "Formato não suportado: " + first.name);
             sources.clear();
-            showSourceInfo();
+            showIdle();
             return;
         }
         target = first.format == Format.PDF ? Format.DOCX : Format.PDF;
-        if (allImages && sources.size() > 0) target = Format.PDF;
-        showSourceInfo();
-        showTargets();
-    }
-
-    private void showSourceInfo() {
-        sourceInfo.removeAllViews();
-        if (sources.isEmpty()) {
-            targetChips.setVisibility(GONE);
-            convertBtn.setVisibility(GONE);
-            chooseBtn.setText("Escolher arquivo");
-            return;
-        }
-        LinearLayout row = new LinearLayout(act);
-        row.setOrientation(LinearLayout.HORIZONTAL);
-        row.setGravity(Gravity.CENTER_VERTICAL);
-        row.setBackground(Ui.rounded(Ui.SURFACE2, Ui.dp(act, 12)));
-        row.setPadding(Ui.dp(act, 10), Ui.dp(act, 10), Ui.dp(act, 12), Ui.dp(act, 10));
-        Converter.Source first = sources.get(0);
-        row.addView(badge(first.format.ext, colorFor(first.format)));
-        LinearLayout t = new LinearLayout(act);
-        t.setOrientation(LinearLayout.VERTICAL);
-        t.setPadding(Ui.dp(act, 12), 0, 0, 0);
-        TextView n = Ui.text(act, sources.size() == 1 ? first.name : sources.size() + " imagens selecionadas", 14.5f, Ui.TEXT, true);
-        n.setSingleLine();
-        n.setEllipsize(TextUtils.TruncateAt.MIDDLE);
-        t.addView(n);
-        long total = 0;
-        for (Converter.Source s : sources) total += Math.max(0, s.size);
-        t.addView(Ui.text(act, first.format.label + (total > 0 ? "  ·  " + Ui.size(total) : ""), 12.5f, Ui.TEXT2, false));
-        row.addView(t, new LinearLayout.LayoutParams(0, -2, 1));
-        sourceInfo.addView(row);
-        TextView to = Ui.text(act, "Converter para", 13, Ui.TEXT2, true);
-        to.setPadding(0, Ui.dp(act, 14), 0, Ui.dp(act, 2));
-        sourceInfo.addView(to);
-        chooseBtn.setText("Trocar arquivo");
-        convertBtn.setVisibility(VISIBLE);
-    }
-
-    private void showTargets() {
-        targetChips.removeAllViews();
-        if (sources.isEmpty()) return;
-        targetChips.setVisibility(VISIBLE);
-        Format src = sources.get(0).format;
-        for (final Format f : Format.targetsFor(src)) {
-            TextView chip = Ui.text(act, f.label, 13.5f, Ui.TEXT, true);
-            chip.setGravity(Gravity.CENTER);
-            chip.setPadding(Ui.dp(act, 14), 0, Ui.dp(act, 14), 0);
-            chip.setMinHeight(Ui.dp(act, 36));
-            int r = Ui.dp(act, 18);
-            boolean sel = f == target;
-            chip.setBackground(Ui.ripple(sel ? Ui.rounded(Ui.PRIMARY, r) : Ui.stroke(0, Ui.DIVIDER, Ui.dp(act, 1), r), r));
-            chip.setTextColor(sel ? Ui.ON_PRIMARY : Ui.TEXT);
-            chip.setOnClickListener(new OnClickListener() {
-                @Override
-                public void onClick(View v) {
-                    target = f;
-                    showTargets();
-                }
-            });
-            targetChips.addView(chip);
-        }
-        convertBtn.setText("Converter para " + target.label);
+        showSelected();
     }
 
     // ------------------------------------------------------------------ conversão
@@ -398,12 +529,11 @@ public class ConvertPage extends ScrollView {
         final Format tgt = target;
         final Converter conv = new Converter(act);
         running = conv;
-        resultBox.setVisibility(GONE);
-        progressBox.setVisibility(VISIBLE);
-        progressText.setText("Preparando…");
-        convertBtn.setEnabled(false);
-        convertBtn.setAlpha(0.5f);
-        chooseBtn.setEnabled(false);
+        if (convertBtn != null) convertBtn.setVisibility(GONE);
+        if (progressBox != null) {
+            progressBox.setVisibility(VISIBLE);
+            Ui.enter(progressBox, 0);
+        }
         new Thread(new Runnable() {
             @Override
             public void run() {
@@ -416,7 +546,7 @@ public class ConvertPage extends ScrollView {
                             act.runOnUiThread(new Runnable() {
                                 @Override
                                 public void run() {
-                                    progressText.setText(msg);
+                                    if (progressText != null) progressText.setText(msg);
                                 }
                             });
                         }
@@ -434,14 +564,13 @@ public class ConvertPage extends ScrollView {
                     @Override
                     public void run() {
                         running = null;
-                        progressBox.setVisibility(GONE);
-                        convertBtn.setEnabled(true);
-                        convertBtn.setAlpha(1f);
-                        chooseBtn.setEnabled(true);
                         if (err != null) {
-                            new AlertDialog.Builder(act).setTitle("Não foi possível converter").setMessage(err)
-                                    .setPositiveButton("OK", null).show();
+                            showSelected();
+                            Sheet.info(act, "Não deu\n*certo.*", err);
                             return;
+                        }
+                        if (r.file.getName().toLowerCase().endsWith(".pdf")) {
+                            History.touch(act, Uri.fromFile(r.file).toString(), r.file.getName(), r.file.length());
                         }
                         showResult(r);
                         refreshOutputs();
@@ -449,69 +578,6 @@ public class ConvertPage extends ScrollView {
                 });
             }
         }).start();
-    }
-
-    private void showResult(Converter.Result r) {
-        lastResult = r.file;
-        if (r.file.getName().toLowerCase().endsWith(".pdf")) {
-            History.touch(act, Uri.fromFile(r.file).toString(), r.file.getName(), r.file.length());
-        }
-        resultBox.removeAllViews();
-        resultBox.setVisibility(VISIBLE);
-        resultBox.setPadding(0, Ui.dp(act, 16), 0, 0);
-        resultBox.addView(Ui.divider(act));
-        LinearLayout row = new LinearLayout(act);
-        row.setOrientation(LinearLayout.HORIZONTAL);
-        row.setGravity(Gravity.CENTER_VERTICAL);
-        row.setPadding(0, Ui.dp(act, 14), 0, Ui.dp(act, 12));
-        ImageView ok = new ImageView(act);
-        ok.setImageDrawable(Ui.icon(act, R.drawable.ic_check, 0xFFFFFFFF));
-        ok.setBackground(Ui.rounded(0xFF1E8E3E, Ui.dp(act, 18)));
-        int p = Ui.dp(act, 7);
-        ok.setPadding(p, p, p, p);
-        row.addView(ok, new LinearLayout.LayoutParams(Ui.dp(act, 36), Ui.dp(act, 36)));
-        LinearLayout t = new LinearLayout(act);
-        t.setOrientation(LinearLayout.VERTICAL);
-        t.setPadding(Ui.dp(act, 12), 0, 0, 0);
-        TextView n = Ui.text(act, r.file.getName(), 14.5f, Ui.TEXT, true);
-        n.setMaxLines(2);
-        n.setEllipsize(TextUtils.TruncateAt.MIDDLE);
-        t.addView(n);
-        String info = Ui.size(r.file.length());
-        if (r.publicUri != null) info += "  ·  salvo em Downloads/PDF Leitor";
-        t.addView(Ui.text(act, info, 12.5f, Ui.TEXT2, false));
-        row.addView(t, new LinearLayout.LayoutParams(0, -2, 1));
-        resultBox.addView(row);
-        LinearLayout actions = new LinearLayout(act);
-        actions.setOrientation(LinearLayout.HORIZONTAL);
-        final File f = r.file;
-        TextView open = Ui.button(act, "Abrir", true);
-        open.setOnClickListener(new OnClickListener() {
-            @Override
-            public void onClick(View v) {
-                Files.open(act, f);
-            }
-        });
-        actions.addView(open, new LinearLayout.LayoutParams(0, -2, 1));
-        TextView share = Ui.button(act, "Enviar", false);
-        share.setOnClickListener(new OnClickListener() {
-            @Override
-            public void onClick(View v) {
-                Files.share(act, Files.shareUri(act, f), Files.mimeOf(f.getName()), f.getName());
-            }
-        });
-        actions.addView(share, Ui.lpMargins(0, -2, Ui.dp(act, 8), 0, 0, 0));
-        ((LinearLayout.LayoutParams) share.getLayoutParams()).weight = 1;
-        TextView save = Ui.button(act, "Salvar…", false);
-        save.setOnClickListener(new OnClickListener() {
-            @Override
-            public void onClick(View v) {
-                saveAs(f);
-            }
-        });
-        actions.addView(save, Ui.lpMargins(0, -2, Ui.dp(act, 8), 0, 0, 0));
-        ((LinearLayout.LayoutParams) save.getLayoutParams()).weight = 1;
-        resultBox.addView(actions);
     }
 
     private void saveAs(File f) {
@@ -574,29 +640,30 @@ public class ConvertPage extends ScrollView {
         int shown = 0;
         for (final File f : files) {
             if (f.isDirectory()) continue;
-            if (shown++ >= 40) break;
+            if (shown++ >= 30) break;
+            if (shown > 1) outputsList.addView(Ui.divider(act));
             LinearLayout row = new LinearLayout(act);
             row.setOrientation(LinearLayout.HORIZONTAL);
             row.setGravity(Gravity.CENTER_VERTICAL);
-            int r = Ui.dp(act, 14);
-            row.setBackground(Ui.ripple(Ui.rounded(Ui.SURFACE, r), r));
-            row.setPadding(Ui.dp(act, 12), Ui.dp(act, 10), Ui.dp(act, 4), Ui.dp(act, 10));
-            Format fmt = Format.fromName(f.getName(), null);
-            row.addView(badge(Util.extension(f.getName()), fmt != null ? colorFor(fmt) : C_TXT));
+            row.setBackground(Ui.ripple(null, Ui.dp(act, 14)));
+            row.setPadding(0, Ui.dp(act, 14), 0, Ui.dp(act, 14));
+            row.addView(new Widgets.FileTag(act, Util.extension(f.getName())), new LinearLayout.LayoutParams(Ui.dp(act, 34), Ui.dp(act, 42)));
             LinearLayout t = new LinearLayout(act);
             t.setOrientation(LinearLayout.VERTICAL);
-            t.setPadding(Ui.dp(act, 12), 0, 0, 0);
-            TextView n = Ui.text(act, f.getName(), 14.5f, Ui.TEXT, true);
+            t.setPadding(Ui.dp(act, 14), 0, 0, 0);
+            TextView n = Ui.text(act, f.getName(), 15.5f, Ui.INK, true);
             n.setSingleLine();
             n.setEllipsize(TextUtils.TruncateAt.MIDDLE);
             t.addView(n);
-            t.addView(Ui.text(act, Ui.size(f.length()) + "  ·  " + Ui.ago(f.lastModified()), 12.5f, Ui.TEXT2, false));
+            TextView m = Ui.label(act, Ui.size(f.length()) + "  ·  " + Ui.ago(f.lastModified()), Ui.INK2);
+            m.setPadding(0, Ui.dp(act, 7), 0, 0);
+            t.addView(m);
             row.addView(t, new LinearLayout.LayoutParams(0, -2, 1));
-            final ImageView more = Ui.iconButton(act, R.drawable.ic_more, Ui.TEXT2, "Opções");
+            ImageView more = Ui.iconButton(act, R.drawable.ic_more, Ui.INK3, "Opções");
             more.setOnClickListener(new OnClickListener() {
                 @Override
                 public void onClick(View v) {
-                    outputMenu(more, f);
+                    outputMenu(f);
                 }
             });
             row.addView(more);
@@ -606,56 +673,55 @@ public class ConvertPage extends ScrollView {
                     Files.open(act, f);
                 }
             });
-            outputsList.addView(row, Ui.lpMargins(-1, -2, 0, 0, 0, Ui.dp(act, 8)));
+            outputsList.addView(row);
         }
         outputsEmpty.setVisibility(shown == 0 ? VISIBLE : GONE);
     }
 
-    private void outputMenu(View anchor, final File f) {
-        Ui.menu(act, f.getName(), new String[]{"Abrir", "Compartilhar", "Salvar em…", "Converter novamente", "Excluir"}, new Ui.MenuCallback() {
-            @Override
-            public void onItem(int id) {
-            switch (id) {
-                case 1:
-                    Files.open(act, f);
-                    break;
-                case 2:
-                    Files.share(act, Files.shareUri(act, f), Files.mimeOf(f.getName()), f.getName());
-                    break;
-                case 3:
-                    saveAs(f);
-                    break;
-                case 4: {
-                    List<Uri> l = new ArrayList<Uri>();
-                    l.add(Uri.fromFile(f));
-                    setExternalSources(l, true);
-                    break;
-                }
-                case 5:
-                    new AlertDialog.Builder(act).setTitle("Excluir arquivo?").setMessage(f.getName())
-                            .setPositiveButton("Excluir", new DialogInterface.OnClickListener() {
-                                @Override
-                                public void onClick(DialogInterface d, int w) {
-                                    History.remove(act, Uri.fromFile(f).toString());
-                                    f.delete();
-                                    refreshOutputs();
-                                }
-                            }).setNegativeButton("Cancelar", null).show();
-                    break;
-                default:
-                    break;
-            }
-            }
-        });
+    private void outputMenu(final File f) {
+        Ui.menu(act, f.getName(), new String[]{"Abrir", "Compartilhar", "Salvar em…", "Converter de novo", "Excluir"},
+                new Ui.MenuCallback() {
+                    @Override
+                    public void onItem(int id) {
+                        switch (id) {
+                            case 1:
+                                Files.open(act, f);
+                                break;
+                            case 2:
+                                Files.share(act, Files.shareUri(act, f), Files.mimeOf(f.getName()), f.getName());
+                                break;
+                            case 3:
+                                saveAs(f);
+                                break;
+                            case 4: {
+                                List<Uri> l = new ArrayList<Uri>();
+                                l.add(Uri.fromFile(f));
+                                setExternalSources(l, true);
+                                break;
+                            }
+                            case 5:
+                                Sheet.confirm(act, "Excluir\n*arquivo?*", f.getName(), "Excluir", true, new Runnable() {
+                                    @Override
+                                    public void run() {
+                                        History.remove(act, Uri.fromFile(f).toString());
+                                        f.delete();
+                                        refreshOutputs();
+                                        Ui.toast(act, "Arquivo excluído");
+                                    }
+                                });
+                                break;
+                            default:
+                                break;
+                        }
+                    }
+                });
     }
 
     void onDestroy() {
         if (running != null) running.cancel();
     }
 
-    // ------------------------------------------------------------------ FlowLayout
-
-    /** Layout que quebra linhas automaticamente (para os chips de formato). */
+    /** Layout que quebra linhas automaticamente (chips de formato). */
     static class FlowLayout extends ViewGroup {
         private final int spacing;
 

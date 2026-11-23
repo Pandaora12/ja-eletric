@@ -1,8 +1,6 @@
 package br.pdfleitor.app;
 
-import android.app.AlertDialog;
 import android.content.ClipData;
-import android.content.DialogInterface;
 import android.content.Intent;
 import android.net.Uri;
 import android.text.Editable;
@@ -11,6 +9,7 @@ import android.text.TextWatcher;
 import android.view.Gravity;
 import android.view.View;
 import android.view.ViewGroup;
+import android.widget.AbsListView;
 import android.widget.AdapterView;
 import android.widget.BaseAdapter;
 import android.widget.EditText;
@@ -24,16 +23,19 @@ import java.io.File;
 import java.util.ArrayList;
 import java.util.List;
 
-/** Aba "PDFs": todos os PDFs já abertos, com busca e favoritos. */
+/** Aba "PDFs": biblioteca de PDFs já abertos. */
 public class PdfListPage extends FrameLayout {
 
     private final MainActivity act;
     private final ListView list;
     private final Adapter adapter = new Adapter();
     private final List<History.Entry> items = new ArrayList<History.Entry>();
-    private final TextView countView;
+    private final TextView statDocs, statPages, statFavs;
     private final LinearLayout empty;
-    private final TextView chipAll, chipFav;
+    private final TextView emptyTitle, emptyText, emptyBtn;
+    private final Widgets.Segmented seg;
+    private final ImageView clearSearch;
+    private final EditText search;
     private boolean favOnly;
     private String filter = "";
 
@@ -41,36 +43,59 @@ public class PdfListPage extends FrameLayout {
         super(a);
         act = a;
         setBackgroundColor(Ui.BG);
-        LinearLayout col = new LinearLayout(a);
-        col.setOrientation(LinearLayout.VERTICAL);
-        int side = Ui.dp(a, 16);
+        int side = Ui.dp(a, 20);
 
+        // ---------------------------------------------------------- cabeçalho
         LinearLayout header = new LinearLayout(a);
         header.setOrientation(LinearLayout.VERTICAL);
-        header.setPadding(side + Ui.dp(a, 4), Ui.dp(a, 20), side, Ui.dp(a, 8));
-        header.addView(Ui.title(a, "Meus PDFs"));
-        countView = Ui.text(a, "", 14, Ui.TEXT2, false);
-        header.addView(countView);
-        col.addView(header);
+        header.setPadding(side, Ui.dp(a, 28), side, Ui.dp(a, 8));
+        header.setLayoutParams(new AbsListView.LayoutParams(-1, -2));
+
+        FrameLayout top = new FrameLayout(a);
+        top.addView(Ui.header(a, "01 — Biblioteca", "Seus\n*PDFs.*", null));
+        ImageView add = Ui.circleButton(a, R.drawable.ic_add, Ui.INK, Ui.BG, 52, "Abrir PDF");
+        add.setOnClickListener(new OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                pick();
+            }
+        });
+        FrameLayout.LayoutParams alp = new FrameLayout.LayoutParams(Ui.dp(a, 52), Ui.dp(a, 52), Gravity.END | Gravity.BOTTOM);
+        alp.bottomMargin = Ui.dp(a, 6);
+        top.addView(add, alp);
+        header.addView(top);
+
+        // estatísticas
+        LinearLayout stats = new LinearLayout(a);
+        stats.setOrientation(LinearLayout.HORIZONTAL);
+        stats.setPadding(0, Ui.dp(a, 26), 0, Ui.dp(a, 22));
+        statDocs = stat(stats, "Documentos", true);
+        statPages = stat(stats, "Páginas", false);
+        statFavs = stat(stats, "Favoritos", false);
+        header.addView(stats);
+        header.addView(Ui.divider(a));
 
         // busca
-        LinearLayout search = new LinearLayout(a);
-        search.setOrientation(LinearLayout.HORIZONTAL);
-        search.setGravity(Gravity.CENTER_VERTICAL);
-        search.setBackground(Ui.rounded(Ui.SURFACE2, Ui.dp(a, 24)));
-        search.setPadding(Ui.dp(a, 14), 0, Ui.dp(a, 8), 0);
+        LinearLayout sbox = new LinearLayout(a);
+        sbox.setOrientation(LinearLayout.HORIZONTAL);
+        sbox.setGravity(Gravity.CENTER_VERTICAL);
+        sbox.setBackground(Ui.stroke(Ui.CARD, Ui.LINE, Math.max(1, Ui.dp(a, 0.8f)), Ui.dp(a, 22)));
+        sbox.setPadding(Ui.dp(a, 16), 0, Ui.dp(a, 6), 0);
         ImageView si = new ImageView(a);
-        si.setImageDrawable(Ui.icon(a, R.drawable.ic_search, Ui.TEXT2));
-        search.addView(si, new LinearLayout.LayoutParams(Ui.dp(a, 22), Ui.dp(a, 22)));
-        EditText et = new EditText(a);
-        et.setHint("Buscar PDFs");
-        et.setHintTextColor(Ui.TEXT2);
-        et.setTextColor(Ui.TEXT);
-        et.setBackground(null);
-        et.setSingleLine();
-        et.setTextSize(15);
-        et.setPadding(Ui.dp(a, 10), 0, 0, 0);
-        et.addTextChangedListener(new TextWatcher() {
+        si.setImageDrawable(Ui.icon(a, R.drawable.ic_search, Ui.INK2));
+        sbox.addView(si, new LinearLayout.LayoutParams(Ui.dp(a, 20), Ui.dp(a, 20)));
+        search = new EditText(a);
+        search.setHint("Buscar na biblioteca");
+        search.setHintTextColor(Ui.INK3);
+        search.setTextColor(Ui.INK);
+        search.setTypeface(Fonts.sans);
+        search.setBackground(null);
+        search.setSingleLine();
+        search.setTextSize(15.5f);
+        search.setPadding(Ui.dp(a, 12), 0, 0, 0);
+        clearSearch = Ui.iconButton(a, R.drawable.ic_close, Ui.INK2, "Limpar busca");
+        clearSearch.setVisibility(GONE);
+        search.addTextChangedListener(new TextWatcher() {
             @Override
             public void beforeTextChanged(CharSequence s, int st, int c, int af) {
             }
@@ -78,149 +103,158 @@ public class PdfListPage extends FrameLayout {
             @Override
             public void onTextChanged(CharSequence s, int st, int b, int c) {
                 filter = s.toString().trim();
-                refresh();
+                clearSearch.setVisibility(filter.isEmpty() ? GONE : VISIBLE);
+                refresh(false);
             }
 
             @Override
             public void afterTextChanged(Editable s) {
             }
         });
-        search.addView(et, new LinearLayout.LayoutParams(0, Ui.dp(a, 48), 1));
-        col.addView(search, Ui.lpMargins(-1, -2, side, Ui.dp(a, 4), side, 0));
-
-        // filtros
-        LinearLayout chips = new LinearLayout(a);
-        chips.setOrientation(LinearLayout.HORIZONTAL);
-        chips.setPadding(side, Ui.dp(a, 12), side, Ui.dp(a, 4));
-        chipAll = chip("Recentes");
-        chipFav = chip("Favoritos");
-        chipAll.setOnClickListener(new OnClickListener() {
+        sbox.addView(search, new LinearLayout.LayoutParams(0, Ui.dp(a, 54), 1));
+        clearSearch.setOnClickListener(new OnClickListener() {
             @Override
             public void onClick(View v) {
-                favOnly = false;
-                refresh();
+                search.setText("");
             }
         });
-        chipFav.setOnClickListener(new OnClickListener() {
-            @Override
-            public void onClick(View v) {
-                favOnly = true;
-                refresh();
-            }
-        });
-        chips.addView(chipAll);
-        chips.addView(chipFav, Ui.lpMargins(-2, -2, Ui.dp(a, 8), 0, 0, 0));
-        col.addView(chips);
+        sbox.addView(clearSearch);
+        header.addView(sbox, Ui.lpMargins(-1, -2, 0, Ui.dp(a, 22), 0, 0));
 
-        list = new ListView(a);
-        list.setDivider(new android.graphics.drawable.ColorDrawable(0));
-        list.setDividerHeight(Ui.dp(a, 8));
-        list.setClipToPadding(false);
-        list.setPadding(side - Ui.dp(a, 4), Ui.dp(a, 4), side - Ui.dp(a, 4), Ui.dp(a, 96));
-        list.setSelector(android.R.color.transparent);
-        list.setAdapter(adapter);
-        list.setOnItemClickListener(new AdapterView.OnItemClickListener() {
+        seg = new Widgets.Segmented(a, new String[]{"Recentes", "Favoritos"}, 0);
+        seg.setListener(new Widgets.Segmented.Listener() {
             @Override
-            public void onItemClick(AdapterView<?> p, View v, int pos, long id) {
-                openEntry(items.get(pos));
+            public void onChange(int index) {
+                favOnly = index == 1;
+                refresh(true);
             }
         });
-        list.setOnItemLongClickListener(new AdapterView.OnItemLongClickListener() {
-            @Override
-            public boolean onItemLongClick(AdapterView<?> p, View v, int pos, long id) {
-                menu(v, items.get(pos));
-                return true;
-            }
-        });
-        FrameLayout listWrap = new FrameLayout(a);
-        listWrap.addView(list, new FrameLayout.LayoutParams(-1, -1));
+        header.addView(seg, Ui.lpMargins(-1, -2, 0, Ui.dp(a, 12), 0, Ui.dp(a, 6)));
 
+        // ---------------------------------------------------------- vazio
         empty = new LinearLayout(a);
         empty.setOrientation(LinearLayout.VERTICAL);
-        empty.setGravity(Gravity.CENTER);
-        empty.setPadding(Ui.dp(a, 40), 0, Ui.dp(a, 40), Ui.dp(a, 60));
-        ImageView ei = new ImageView(a);
-        ei.setImageDrawable(Ui.icon(a, R.drawable.ic_doc, Ui.PRIMARY));
-        ei.setBackground(Ui.rounded(Ui.PRIMARY_SOFT, Ui.dp(a, 40)));
-        int ep = Ui.dp(a, 22);
-        ei.setPadding(ep, ep, ep, ep);
-        empty.addView(ei, new LinearLayout.LayoutParams(Ui.dp(a, 80), Ui.dp(a, 80)));
-        TextView et1 = Ui.text(a, "Nenhum PDF por aqui", 18, Ui.TEXT, true);
-        et1.setPadding(0, Ui.dp(a, 16), 0, Ui.dp(a, 6));
-        empty.addView(et1);
-        TextView et2 = Ui.text(a, "Toque em \"Abrir PDF\" para escolher um arquivo. Tudo o que você abrir aparece nesta lista.", 14, Ui.TEXT2, false);
-        et2.setGravity(Gravity.CENTER);
-        empty.addView(et2);
-        listWrap.addView(empty, new FrameLayout.LayoutParams(-1, -1));
-        col.addView(listWrap, new LinearLayout.LayoutParams(-1, 0, 1));
-        addView(col, new LayoutParams(-1, -1));
-
-        // botão flutuante
-        LinearLayout fab = new LinearLayout(a);
-        fab.setOrientation(LinearLayout.HORIZONTAL);
-        fab.setGravity(Gravity.CENTER_VERTICAL);
-        int r = Ui.dp(a, 18);
-        fab.setBackground(Ui.ripple(Ui.rounded(Ui.PRIMARY, r), r));
-        fab.setElevation(Ui.dp(a, 6));
-        fab.setPadding(Ui.dp(a, 18), 0, Ui.dp(a, 22), 0);
-        fab.setClickable(true);
-        ImageView fi = new ImageView(a);
-        fi.setImageDrawable(Ui.icon(a, R.drawable.ic_add, Ui.ON_PRIMARY));
-        fab.addView(fi, new LinearLayout.LayoutParams(Ui.dp(a, 24), Ui.dp(a, 24)));
-        TextView ft = Ui.text(a, "Abrir PDF", 15, Ui.ON_PRIMARY, true);
-        ft.setPadding(Ui.dp(a, 10), 0, 0, 0);
-        fab.addView(ft);
-        fab.setOnClickListener(new OnClickListener() {
+        empty.setGravity(Gravity.CENTER_HORIZONTAL);
+        empty.setPadding(side, Ui.dp(a, 8), side, Ui.dp(a, 40));
+        empty.setLayoutParams(new AbsListView.LayoutParams(-1, -2));
+        empty.addView(new Widgets.PaperArt(a), new LinearLayout.LayoutParams(-1, Ui.dp(a, 220)));
+        emptyTitle = Ui.display(a, "", 34);
+        emptyTitle.setGravity(Gravity.CENTER);
+        empty.addView(emptyTitle, Ui.lpMargins(-2, -2, 0, Ui.dp(a, 8), 0, 0));
+        emptyText = Ui.text(a, "", 15, Ui.INK2, false);
+        emptyText.setGravity(Gravity.CENTER);
+        emptyText.setPadding(Ui.dp(a, 16), Ui.dp(a, 12), Ui.dp(a, 16), 0);
+        empty.addView(emptyText);
+        emptyBtn = Ui.button(a, "Abrir um PDF", true, true);
+        emptyBtn.setOnClickListener(new OnClickListener() {
             @Override
             public void onClick(View v) {
                 pick();
             }
         });
-        LayoutParams flp = new LayoutParams(-2, Ui.dp(a, 56), Gravity.BOTTOM | Gravity.END);
-        flp.setMargins(0, 0, Ui.dp(a, 18), Ui.dp(a, 18));
-        addView(fab, flp);
-        refresh();
+        empty.addView(emptyBtn, Ui.lpMargins(-2, -2, 0, Ui.dp(a, 24), 0, 0));
+
+        // ---------------------------------------------------------- lista
+        list = new ListView(a);
+        list.setDivider(new android.graphics.drawable.ColorDrawable(0));
+        list.setDividerHeight(Ui.dp(a, 10));
+        list.setClipToPadding(false);
+        list.setPadding(0, 0, 0, Ui.dp(a, 120));
+        list.setSelector(android.R.color.transparent);
+        list.setVerticalScrollBarEnabled(false);
+        list.setOverScrollMode(OVER_SCROLL_NEVER);
+        list.addHeaderView(header, null, false);
+        list.addFooterView(empty, null, false);
+        list.setAdapter(adapter);
+        list.setOnItemClickListener(new AdapterView.OnItemClickListener() {
+            @Override
+            public void onItemClick(AdapterView<?> p, View v, int pos, long id) {
+                int i = pos - list.getHeaderViewsCount();
+                if (i >= 0 && i < items.size()) openEntry(items.get(i));
+            }
+        });
+        list.setOnItemLongClickListener(new AdapterView.OnItemLongClickListener() {
+            @Override
+            public boolean onItemLongClick(AdapterView<?> p, View v, int pos, long id) {
+                int i = pos - list.getHeaderViewsCount();
+                if (i >= 0 && i < items.size()) menu(items.get(i));
+                return true;
+            }
+        });
+        addView(list, new LayoutParams(-1, -1));
+
+        refresh(false);
     }
 
-    private TextView chip(String label) {
-        TextView t = Ui.text(act, label, 14, Ui.TEXT, true);
-        t.setGravity(Gravity.CENTER);
-        t.setPadding(Ui.dp(act, 16), 0, Ui.dp(act, 16), 0);
-        t.setMinHeight(Ui.dp(act, 36));
-        t.setClickable(true);
-        return t;
-    }
-
-    private void styleChip(TextView t, boolean sel) {
-        int r = Ui.dp(act, 18);
-        t.setBackground(Ui.ripple(sel ? Ui.rounded(Ui.PRIMARY_SOFT, r) : Ui.stroke(0, Ui.DIVIDER, Ui.dp(act, 1), r), r));
-        t.setTextColor(sel ? Ui.PRIMARY : Ui.TEXT2);
+    private TextView stat(LinearLayout parent, String label, boolean first) {
+        LinearLayout c = new LinearLayout(act);
+        c.setOrientation(LinearLayout.VERTICAL);
+        if (!first) c.setPadding(Ui.dp(act, 16), 0, 0, 0);
+        TextView n = Ui.display(act, "0", 40);
+        c.addView(n);
+        TextView l = Ui.label(act, label, Ui.INK2);
+        l.setPadding(0, Ui.dp(act, 8), 0, 0);
+        c.addView(l);
+        parent.addView(c, new LinearLayout.LayoutParams(0, -2, 1));
+        return n;
     }
 
     public void refresh() {
+        refresh(false);
+    }
+
+    public void refresh(boolean animate) {
         items.clear();
         List<History.Entry> all = History.all(act);
         String f = ViewerActivity.fold(filter);
-        int favs = 0;
+        int favs = 0, pages = 0;
         for (History.Entry e : all) {
             if (e.fav) favs++;
+            pages += Math.max(0, e.pages);
             if (favOnly && !e.fav) continue;
             if (f.length() > 0 && !ViewerActivity.fold(e.name).contains(f)) continue;
             items.add(e);
         }
-        styleChip(chipAll, !favOnly);
-        styleChip(chipFav, favOnly);
-        chipFav.setText(favs > 0 ? "Favoritos · " + favs : "Favoritos");
-        countView.setText(all.isEmpty() ? "Leia e organize seus documentos" : all.size() + (all.size() == 1 ? " documento" : " documentos"));
-        empty.setVisibility(items.isEmpty() ? VISIBLE : GONE);
-        if (items.isEmpty() && !all.isEmpty()) {
-            ((TextView) empty.getChildAt(1)).setText(favOnly ? "Nenhum favorito" : "Nada encontrado");
-            ((TextView) empty.getChildAt(2)).setText(favOnly ? "Toque na estrela de um PDF para marcá-lo como favorito." : "Tente outra busca.");
-        } else if (all.isEmpty()) {
-            ((TextView) empty.getChildAt(1)).setText("Nenhum PDF por aqui");
-            ((TextView) empty.getChildAt(2)).setText("Toque em \"Abrir PDF\" para escolher um arquivo. Tudo o que você abrir aparece nesta lista.");
+        if (animate) {
+            Ui.countUp(statDocs, all.size());
+            Ui.countUp(statPages, pages);
+            Ui.countUp(statFavs, favs);
+        } else {
+            statDocs.setText(String.valueOf(all.size()));
+            statPages.setText(String.valueOf(pages));
+            statFavs.setText(String.valueOf(favs));
         }
+        boolean isEmpty = items.isEmpty();
+        for (int i = 0; i < empty.getChildCount(); i++) empty.getChildAt(i).setVisibility(isEmpty ? VISIBLE : GONE);
+        empty.setPadding(empty.getPaddingLeft(), isEmpty ? Ui.dp(act, 8) : 0, empty.getPaddingRight(), isEmpty ? Ui.dp(act, 40) : 0);
+        if (all.isEmpty()) {
+            emptyTitle.setText(Ui.rich("Sua estante\nestá *vazia.*"));
+            emptyText.setText("Abra um PDF e ele fica guardado aqui, com a página onde você parou. Nada sai do seu aparelho.");
+        } else if (favOnly && filter.isEmpty()) {
+            emptyTitle.setText(Ui.rich("Nenhum\n*favorito* ainda."));
+            emptyText.setText("Toque na estrela de um documento para mantê-lo sempre à mão.");
+        } else {
+            emptyTitle.setText(Ui.rich("Nada *encontrado.*"));
+            emptyText.setText("Nenhum documento corresponde a \"" + filter + "\".");
+        }
+        emptyBtn.setVisibility(isEmpty && all.isEmpty() ? VISIBLE : GONE);
         adapter.notifyDataSetChanged();
+        if (animate) {
+            list.post(new Runnable() {
+                @Override
+                public void run() {
+                    int n = 0;
+                    for (int i = 0; i < list.getChildCount(); i++) {
+                        View v = list.getChildAt(i);
+                        if (!(v instanceof Row)) continue;
+                        v.setAlpha(0f);
+                        v.setTranslationY(Ui.dp(act, 28));
+                        v.animate().alpha(1f).translationY(0).setStartDelay(60 + n * 60L).setDuration(560).setInterpolator(Ui.EASE).start();
+                        n++;
+                    }
+                }
+            });
+        }
     }
 
     private void pick() {
@@ -249,10 +283,10 @@ public class PdfListPage extends FrameLayout {
         }
         if (uris.size() == 1) {
             ViewerActivity.open(act, uris.get(0), Files.displayName(act, uris.get(0)));
-        } else {
+        } else if (uris.size() > 1) {
             for (Uri u : uris) History.touch(act, u.toString(), Files.displayName(act, u), Files.size(act, u));
-            Ui.toast(act, uris.size() + " PDFs adicionados à lista");
-            refresh();
+            Ui.toast(act, uris.size() + " PDFs adicionados à biblioteca");
+            refresh(true);
         }
     }
 
@@ -260,52 +294,51 @@ public class PdfListPage extends FrameLayout {
         ViewerActivity.open(act, Uri.parse(e.uri), e.name);
     }
 
-    private void menu(View anchor, final History.Entry e) {
-        Ui.menu(act, e.name, new String[]{"Abrir", e.fav ? "Remover dos favoritos" : "Adicionar aos favoritos", "Compartilhar", "Converter", "Remover da lista"}, new Ui.MenuCallback() {
+    private void menu(final History.Entry e) {
+        Ui.menu(act, e.name.replaceAll("(?i)\\.pdf$", ""), new String[]{"Abrir", e.fav ? "Tirar dos favoritos" : "Adicionar aos favoritos",
+                "Compartilhar", "Converter", "Remover da biblioteca"}, new Ui.MenuCallback() {
             @Override
             public void onItem(int id) {
-            switch (id) {
-                case 1:
-                    openEntry(e);
-                    break;
-                case 2:
-                    e.fav = !e.fav;
-                    History.update(act, e);
-                    refresh();
-                    break;
-                case 3:
-                    try {
-                        Files.share(act, Files.externalUri(act, e.uri), "application/pdf", e.name);
-                    } catch (Exception ex) {
-                        Ui.toast(act, "Não foi possível compartilhar este arquivo.");
+                switch (id) {
+                    case 1:
+                        openEntry(e);
+                        break;
+                    case 2:
+                        e.fav = !e.fav;
+                        History.update(act, e);
+                        refresh(false);
+                        break;
+                    case 3:
+                        try {
+                            Files.share(act, Files.externalUri(act, e.uri), "application/pdf", e.name);
+                        } catch (Exception ex) {
+                            Ui.toast(act, "Não foi possível compartilhar este arquivo.");
+                        }
+                        break;
+                    case 4: {
+                        List<Uri> l = new ArrayList<Uri>();
+                        l.add(Uri.parse(e.uri));
+                        act.select(1);
+                        act.convertPage.setExternalSources(l, true);
+                        break;
                     }
-                    break;
-                case 4: {
-                    List<Uri> l = new ArrayList<Uri>();
-                    l.add(Uri.parse(e.uri));
-                    act.select(1);
-                    act.convertPage.setExternalSources(l, true);
-                    break;
+                    case 5:
+                        confirmRemove(e);
+                        break;
+                    default:
+                        break;
                 }
-                case 5:
-                    confirmRemove(e);
-                    break;
-                default:
-                    break;
-            }
             }
         });
     }
 
     private void confirmRemove(final History.Entry e) {
-        new AlertDialog.Builder(act).setTitle("Remover da lista?")
-                .setMessage("\"" + e.name + "\" sai da lista. O arquivo original não é apagado.")
-                .setPositiveButton("Remover", new DialogInterface.OnClickListener() {
+        Sheet.confirm(act, "Remover da\n*biblioteca?*", "\"" + e.name + "\" sai da lista. O arquivo original continua no aparelho.",
+                "Remover", true, new Runnable() {
                     @Override
-                    public void onClick(DialogInterface d, int w) {
+                    public void run() {
                         History.remove(act, e.uri);
                         Uri u = Uri.parse(e.uri);
-                        // cópias internas (PDFs recebidos de outros apps) são apagadas
                         if ("file".equals(u.getScheme()) && u.getPath() != null
                                 && u.getPath().startsWith(Files.libraryDir(act).getPath())) {
                             File f = new File(u.getPath());
@@ -318,9 +351,10 @@ public class PdfListPage extends FrameLayout {
                             } catch (Exception ignored) {
                             }
                         }
-                        refresh();
+                        refresh(false);
+                        Ui.toast(act, "Removido da biblioteca");
                     }
-                }).setNegativeButton("Cancelar", null).show();
+                });
     }
 
     // ------------------------------------------------------------------ lista
@@ -350,83 +384,107 @@ public class PdfListPage extends FrameLayout {
     }
 
     private class Row extends LinearLayout {
-        final ImageView thumb, star, more;
-        final TextView name, meta, sub;
+        final ImageView thumb, star;
+        final TextView name, meta, pct;
+        final Widgets.ProgressLine progress;
+        final LinearLayout progRow;
         History.Entry entry;
 
         Row() {
             super(act);
-            setOrientation(HORIZONTAL);
-            setGravity(Gravity.CENTER_VERTICAL);
-            int r = Ui.dp(act, 16);
-            LinearLayout inner = this;
-            inner.setBackground(Ui.ripple(Ui.rounded(Ui.SURFACE, r), r));
-            setPadding(Ui.dp(act, 12), Ui.dp(act, 10), Ui.dp(act, 4), Ui.dp(act, 10));
-            AbsLp lp = new AbsLp();
-            setLayoutParams(lp);
+            setOrientation(VERTICAL);
+            int side = Ui.dp(act, 20);
+            setPadding(side, 0, side, 0);
+            setLayoutParams(new AbsListView.LayoutParams(-1, -2));
+
+            LinearLayout card = new LinearLayout(act);
+            card.setOrientation(HORIZONTAL);
+            card.setGravity(Gravity.CENTER_VERTICAL);
+            int r = Ui.dp(act, 24);
+            card.setBackground(Ui.ripple(Ui.stroke(Ui.CARD, Ui.LINE, Math.max(1, Ui.dp(act, 0.8f)), r), r));
+            card.setPadding(Ui.dp(act, 12), Ui.dp(act, 12), Ui.dp(act, 6), Ui.dp(act, 12));
+            card.setDuplicateParentStateEnabled(true);
+            addView(card, new LayoutParams(-1, -2));
 
             FrameLayout tf = new FrameLayout(act);
-            tf.setBackground(Ui.stroke(Ui.dark ? 0xFF2A2B2F : 0xFFF1F2F4, Ui.DIVIDER, Ui.dp(act, 1), Ui.dp(act, 6)));
-            tf.setPadding(1, 1, 1, 1);
-            ImageView ph = new ImageView(act);
-            ph.setImageDrawable(Ui.icon(act, R.drawable.ic_doc, Ui.PRIMARY));
-            int pp = Ui.dp(act, 14);
-            ph.setPadding(pp, pp, pp, pp);
-            tf.addView(ph, new FrameLayout.LayoutParams(-1, -1));
+            tf.setBackground(Ui.stroke(Ui.CARD2, Ui.LINE, Math.max(1, Ui.dp(act, 0.8f)), Ui.dp(act, 10)));
+            Widgets.FileTag ph = new Widgets.FileTag(act, "pdf");
+            tf.addView(ph, new FrameLayout.LayoutParams(Ui.dp(act, 26), Ui.dp(act, 32), Gravity.CENTER));
             thumb = new ImageView(act);
             thumb.setScaleType(ImageView.ScaleType.CENTER_CROP);
             tf.addView(thumb, new FrameLayout.LayoutParams(-1, -1));
             tf.setClipToOutline(true);
-            addView(tf, new LayoutParams(Ui.dp(act, 50), Ui.dp(act, 66)));
+            card.addView(tf, new LayoutParams(Ui.dp(act, 60), Ui.dp(act, 80)));
 
             LinearLayout texts = new LinearLayout(act);
             texts.setOrientation(VERTICAL);
-            texts.setPadding(Ui.dp(act, 14), 0, Ui.dp(act, 4), 0);
-            name = Ui.text(act, "", 15.5f, Ui.TEXT, true);
+            texts.setPadding(Ui.dp(act, 16), 0, Ui.dp(act, 6), 0);
+            name = Ui.text(act, "", 16.5f, Ui.INK, true);
             name.setMaxLines(2);
             name.setEllipsize(TextUtils.TruncateAt.END);
-            meta = Ui.text(act, "", 13, Ui.TEXT2, false);
-            meta.setPadding(0, Ui.dp(act, 3), 0, 0);
-            sub = Ui.text(act, "", 12.5f, Ui.TEXT2, false);
             texts.addView(name);
+            meta = Ui.label(act, "", Ui.INK2);
+            meta.setPadding(0, Ui.dp(act, 9), 0, 0);
             texts.addView(meta);
-            texts.addView(sub);
-            addView(texts, new LayoutParams(0, -2, 1));
+            progRow = new LinearLayout(act);
+            progRow.setOrientation(HORIZONTAL);
+            progRow.setGravity(Gravity.CENTER_VERTICAL);
+            progRow.setPadding(0, Ui.dp(act, 12), 0, 0);
+            progress = new Widgets.ProgressLine(act);
+            progRow.addView(progress, new LayoutParams(0, Ui.dp(act, 3), 1));
+            pct = Ui.label(act, "", Ui.INK2);
+            pct.setPadding(Ui.dp(act, 10), 0, 0, 0);
+            progRow.addView(pct);
+            texts.addView(progRow);
+            card.addView(texts, new LayoutParams(0, -2, 1));
 
-            star = Ui.iconButton(act, R.drawable.ic_star_border, Ui.TEXT2, "Favorito");
+            LinearLayout side2 = new LinearLayout(act);
+            side2.setOrientation(VERTICAL);
+            star = Ui.iconButton(act, R.drawable.ic_star_border, Ui.INK3, "Favorito");
             star.setFocusable(false);
             star.setOnClickListener(new OnClickListener() {
                 @Override
                 public void onClick(View v) {
                     entry.fav = !entry.fav;
                     History.update(act, entry);
-                    refresh();
+                    star.animate().scaleX(1.3f).scaleY(1.3f).setDuration(120).withEndAction(new Runnable() {
+                        @Override
+                        public void run() {
+                            star.animate().scaleX(1f).scaleY(1f).setDuration(260).setInterpolator(Ui.EASE).start();
+                        }
+                    }).start();
+                    refresh(false);
                 }
             });
-            addView(star);
-            more = Ui.iconButton(act, R.drawable.ic_more, Ui.TEXT2, "Opções");
+            side2.addView(star);
+            ImageView more = Ui.iconButton(act, R.drawable.ic_more, Ui.INK3, "Opções");
             more.setFocusable(false);
             more.setOnClickListener(new OnClickListener() {
                 @Override
                 public void onClick(View v) {
-                    menu(more, entry);
+                    menu(entry);
                 }
             });
-            addView(more);
+            side2.addView(more);
+            card.addView(side2);
         }
 
         void bind(History.Entry e) {
             entry = e;
-            name.setText(e.name);
+            name.setText(e.name.replaceAll("(?i)\\.pdf$", ""));
             StringBuilder m = new StringBuilder();
-            if (e.pages > 0) m.append(e.pages).append(e.pages == 1 ? " página" : " páginas");
+            if (e.pages > 0) m.append(e.pages).append(e.pages == 1 ? " pág" : " págs");
             if (e.size > 0) m.append(m.length() > 0 ? "  ·  " : "").append(Ui.size(e.size));
-            meta.setText(m.length() > 0 ? m : "PDF");
-            String s = "Aberto " + Ui.ago(e.opened);
-            if (e.pages > 1 && e.lastPage > 0) s += "  ·  parou na pág. " + (e.lastPage + 1);
-            sub.setText(s);
-            star.setImageDrawable(Ui.icon(act, e.fav ? R.drawable.ic_star : R.drawable.ic_star_border, e.fav ? 0xFFF4B400 : Ui.TEXT2));
-            Thumbs.load(act, e.uri, thumb, Ui.dp(act, 50), new Thumbs.PagesCallback() {
+            m.append(m.length() > 0 ? "  ·  " : "").append(Ui.ago(e.opened));
+            meta.setText(m.toString().toUpperCase());
+            if (e.pages > 1) {
+                progRow.setVisibility(VISIBLE);
+                float f = (e.lastPage + 1) / (float) e.pages;
+                progress.set(f);
+                pct.setText(Math.round(f * 100) + "%");
+            } else progRow.setVisibility(GONE);
+            star.setImageDrawable(Ui.icon(act, e.fav ? R.drawable.ic_star : R.drawable.ic_star_border, e.fav ? Ui.ACCENT : Ui.INK3));
+            Thumbs.load(act, e.uri, thumb, Ui.dp(act, 60), new Thumbs.PagesCallback() {
                 @Override
                 public void onPages(String uri, int pages) {
                     History.Entry he = History.find(act, uri);
@@ -437,13 +495,6 @@ public class PdfListPage extends FrameLayout {
                     }
                 }
             });
-        }
-    }
-
-    /** Espaçamento entre itens da lista. */
-    private class AbsLp extends android.widget.AbsListView.LayoutParams {
-        AbsLp() {
-            super(-1, -2);
         }
     }
 }

@@ -25,7 +25,7 @@ sed "s|<manifest xmlns:android=\"http://schemas.android.com/apk/res/android\">|<
     "$SRC/AndroidManifest.xml" > "$OUT/AndroidManifest.xml"
 "$BUILD_TOOLS/aapt2" compile --dir "$SRC/res" -o "$OUT/res.zip"
 "$BUILD_TOOLS/aapt2" link -o "$OUT/base.apk" -I "$ANDROID_JAR" --manifest "$OUT/AndroidManifest.xml" \
-    --java "$OUT/gen" --auto-add-overlay "$OUT/res.zip" --rename-manifest-package "$PACKAGE" \
+    -A "$SRC/assets" --java "$OUT/gen" --auto-add-overlay "$OUT/res.zip" --rename-manifest-package "$PACKAGE" \
     --min-sdk-version 21 --target-sdk-version 34 --version-code "$VERSION_CODE" --version-name "$VERSION_NAME"
 
 echo "[2/5] Java (javac)"

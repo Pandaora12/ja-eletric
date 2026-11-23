@@ -1,8 +1,6 @@
 package br.pdfleitor.app;
 
 import android.app.Activity;
-import android.app.AlertDialog;
-import android.content.DialogInterface;
 import android.content.Intent;
 import android.net.Uri;
 import android.os.Bundle;
@@ -38,7 +36,8 @@ public class ViewerActivity extends Activity {
     private LinearLayout topBar, bottomBar;
     private TextView titleView, subtitleView, pageChip;
     private SeekBar seek;
-    private ProgressBar loading;
+    private View loading;
+    private LinearLayout loadingBox;
     private FrameLayout root;
     private boolean barsVisible = true;
     private String storedUri, name;
@@ -137,20 +136,29 @@ public class ViewerActivity extends Activity {
         });
     }
 
+    private LinearLayout capsule() {
+        LinearLayout l = new LinearLayout(this);
+        l.setOrientation(LinearLayout.HORIZONTAL);
+        l.setGravity(Gravity.CENTER_VERTICAL);
+        l.setBackground(Ui.stroke(Ui.CARD, Ui.LINE, Math.max(1, Ui.dp(this, 0.8f)), Ui.dp(this, 30)));
+        l.setElevation(Ui.dp(this, 10));
+        return l;
+    }
+
     private void buildUi() {
+        getWindow().setStatusBarColor(Ui.VIEWER_BG);
+        getWindow().setNavigationBarColor(Ui.VIEWER_BG);
+        Snack.bottomOffsetDp = 110;
         root = new FrameLayout(this);
+        root.setBackgroundColor(Ui.VIEWER_BG);
         pdfView = new PdfView(this);
         pdfView.setNight(Prefs.nightReading(this));
         root.addView(pdfView, new FrameLayout.LayoutParams(-1, -1));
 
-        // barra superior
-        topBar = new LinearLayout(this);
-        topBar.setOrientation(LinearLayout.HORIZONTAL);
-        topBar.setGravity(Gravity.CENTER_VERTICAL);
-        topBar.setBackgroundColor(Ui.SURFACE);
-        topBar.setElevation(Ui.dp(this, 3));
-        topBar.setPadding(Ui.dp(this, 4), 0, Ui.dp(this, 4), 0);
-        ImageView back = Ui.iconButton(this, R.drawable.ic_back, Ui.TEXT, "Voltar");
+        // cápsula superior
+        topBar = capsule();
+        topBar.setPadding(Ui.dp(this, 6), Ui.dp(this, 6), Ui.dp(this, 6), Ui.dp(this, 6));
+        ImageView back = Ui.circleButton(this, R.drawable.ic_back, Ui.CARD2, Ui.INK, 44, "Voltar");
         back.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
@@ -160,15 +168,16 @@ public class ViewerActivity extends Activity {
         topBar.addView(back);
         LinearLayout titles = new LinearLayout(this);
         titles.setOrientation(LinearLayout.VERTICAL);
-        titles.setPadding(Ui.dp(this, 6), 0, 0, 0);
-        titleView = Ui.text(this, "", 16, Ui.TEXT, true);
+        titles.setPadding(Ui.dp(this, 12), 0, Ui.dp(this, 4), 0);
+        titleView = Ui.text(this, "", 15.5f, Ui.INK, true);
         titleView.setSingleLine();
         titleView.setEllipsize(TextUtils.TruncateAt.MIDDLE);
-        subtitleView = Ui.text(this, "Abrindo…", 12.5f, Ui.TEXT2, false);
+        subtitleView = Ui.label(this, "Abrindo…", Ui.INK2);
+        subtitleView.setPadding(0, Ui.dp(this, 5), 0, 0);
         titles.addView(titleView);
         titles.addView(subtitleView);
         topBar.addView(titles, new LinearLayout.LayoutParams(0, -2, 1));
-        ImageView search = Ui.iconButton(this, R.drawable.ic_search, Ui.TEXT, "Buscar");
+        ImageView search = Ui.iconButton(this, R.drawable.ic_search, Ui.INK, "Buscar");
         search.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
@@ -176,18 +185,19 @@ public class ViewerActivity extends Activity {
             }
         });
         topBar.addView(search);
-        final ImageView nightBtn = Ui.iconButton(this, R.drawable.ic_night, Ui.TEXT, "Modo noturno");
+        final ImageView nightBtn = Ui.iconButton(this, R.drawable.ic_night, Ui.INK, "Modo noturno");
         nightBtn.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
                 boolean n = !pdfView.isNight();
                 pdfView.setNight(n);
                 Prefs.put(ViewerActivity.this, "night_reading", n);
-                Ui.toast(ViewerActivity.this, n ? "Modo noturno ativado" : "Modo noturno desativado");
+                nightBtn.animate().rotationBy(360).setDuration(600).setInterpolator(Ui.EASE).start();
+                Ui.toast(ViewerActivity.this, n ? "Modo noturno ligado" : "Modo noturno desligado");
             }
         });
         topBar.addView(nightBtn);
-        final ImageView more = Ui.iconButton(this, R.drawable.ic_more, Ui.TEXT, "Mais opções");
+        final ImageView more = Ui.iconButton(this, R.drawable.ic_more, Ui.INK, "Mais opções");
         more.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
@@ -195,19 +205,17 @@ public class ViewerActivity extends Activity {
             }
         });
         topBar.addView(more);
-        int barH = Ui.dp(this, 60);
-        root.addView(topBar, new FrameLayout.LayoutParams(-1, barH, Gravity.TOP));
-        pdfView.setTopInset(barH);
+        FrameLayout.LayoutParams tlp = new FrameLayout.LayoutParams(-1, -2, Gravity.TOP);
+        int m = Ui.dp(this, 12);
+        tlp.setMargins(m, m, m, 0);
+        root.addView(topBar, tlp);
+        pdfView.setTopInset(Ui.dp(this, 80));
 
-        // barra inferior com indicador de página
-        bottomBar = new LinearLayout(this);
-        bottomBar.setOrientation(LinearLayout.HORIZONTAL);
-        bottomBar.setGravity(Gravity.CENTER_VERTICAL);
-        bottomBar.setBackground(Ui.rounded(Ui.SURFACE, Ui.dp(this, 28)));
-        bottomBar.setElevation(Ui.dp(this, 4));
-        bottomBar.setPadding(Ui.dp(this, 16), Ui.dp(this, 4), Ui.dp(this, 8), Ui.dp(this, 4));
-        pageChip = Ui.text(this, "", 14, Ui.TEXT, true);
-        pageChip.setMinWidth(Ui.dp(this, 64));
+        // cápsula inferior: página + régua
+        bottomBar = capsule();
+        bottomBar.setPadding(Ui.dp(this, 20), Ui.dp(this, 6), Ui.dp(this, 10), Ui.dp(this, 6));
+        pageChip = Ui.display(this, "", 26);
+        pageChip.setMinWidth(Ui.dp(this, 60));
         pageChip.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
@@ -216,11 +224,14 @@ public class ViewerActivity extends Activity {
         });
         bottomBar.addView(pageChip);
         seek = new SeekBar(this);
+        seek.setProgressTintList(android.content.res.ColorStateList.valueOf(Ui.ACCENT));
+        seek.setThumbTintList(android.content.res.ColorStateList.valueOf(Ui.INK));
+        seek.setProgressBackgroundTintList(android.content.res.ColorStateList.valueOf(Ui.INK3));
         seek.setOnSeekBarChangeListener(new SeekBar.OnSeekBarChangeListener() {
             @Override
             public void onProgressChanged(SeekBar s, int p, boolean user) {
                 if (user && doc != null) {
-                    pageChip.setText((p + 1) + " / " + doc.count);
+                    pageChip.setText(Ui.rich((p + 1) + "*/" + doc.count + "*"));
                     pdfView.goToPage(p);
                 }
             }
@@ -235,14 +246,19 @@ public class ViewerActivity extends Activity {
                 seeking = false;
             }
         });
-        bottomBar.addView(seek, new LinearLayout.LayoutParams(0, Ui.dp(this, 44), 1));
+        bottomBar.addView(seek, new LinearLayout.LayoutParams(0, Ui.dp(this, 48), 1));
         FrameLayout.LayoutParams blp = new FrameLayout.LayoutParams(-1, -2, Gravity.BOTTOM);
-        int m = Ui.dp(this, 14);
-        blp.setMargins(m, m, m, m);
+        blp.setMargins(Ui.dp(this, 16), 0, Ui.dp(this, 16), Ui.dp(this, 16));
         root.addView(bottomBar, blp);
 
-        loading = new ProgressBar(this);
-        root.addView(loading, new FrameLayout.LayoutParams(Ui.dp(this, 48), Ui.dp(this, 48), Gravity.CENTER));
+        loadingBox = new LinearLayout(this);
+        loadingBox.setOrientation(LinearLayout.VERTICAL);
+        loadingBox.setGravity(Gravity.CENTER);
+        TextView lt = Ui.display(this, "Abrindo…", 30);
+        loadingBox.addView(lt);
+        loadingBox.addView(new Widgets.LineLoader(this), Ui.lpMargins(Ui.dp(this, 140), Ui.dp(this, 3), 0, Ui.dp(this, 18), 0, 0));
+        root.addView(loadingBox, new FrameLayout.LayoutParams(-2, -2, Gravity.CENTER));
+        loading = loadingBox;
 
         pdfView.setListener(new PdfView.Listener() {
             @Override
@@ -256,11 +272,15 @@ public class ViewerActivity extends Activity {
             }
         });
         setContentView(root);
+        topBar.setTranslationY(-Ui.dp(this, 100));
+        topBar.animate().translationY(0).setDuration(600).setStartDelay(100).setInterpolator(Ui.EASE).start();
+        bottomBar.setTranslationY(Ui.dp(this, 120));
+        bottomBar.animate().translationY(0).setDuration(600).setStartDelay(180).setInterpolator(Ui.EASE).start();
     }
 
     private void updatePage(int page, int count) {
-        subtitleView.setText("Página " + (page + 1) + " de " + count);
-        pageChip.setText((page + 1) + " / " + count);
+        subtitleView.setText(("Página " + (page + 1) + " de " + count).toUpperCase());
+        pageChip.setText(Ui.rich((page + 1) + "*/" + count + "*"));
         if (!seeking) seek.setProgress(page);
         if (entry != null && entry.lastPage != page) {
             entry.lastPage = page;
@@ -269,21 +289,25 @@ public class ViewerActivity extends Activity {
 
     private void toggleBars() {
         barsVisible = !barsVisible;
-        float dyTop = barsVisible ? 0 : -topBar.getHeight() - Ui.dp(this, 8);
-        float dyBottom = barsVisible ? 0 : bottomBar.getHeight() + Ui.dp(this, 32);
-        topBar.animate().translationY(dyTop).setDuration(180).start();
-        bottomBar.animate().translationY(dyBottom).setDuration(180).start();
+        float dyTop = barsVisible ? 0 : -topBar.getHeight() - Ui.dp(this, 24);
+        float dyBottom = barsVisible ? 0 : bottomBar.getHeight() + Ui.dp(this, 40);
+        topBar.animate().translationY(dyTop).alpha(barsVisible ? 1f : 0f).setDuration(320).setInterpolator(Ui.EASE).start();
+        bottomBar.animate().translationY(dyBottom).alpha(barsVisible ? 1f : 0f).setDuration(320).setInterpolator(Ui.EASE).start();
     }
 
     private void showError(String msg) {
         loading.setVisibility(View.GONE);
-        subtitleView.setText("Erro");
+        subtitleView.setText("ERRO");
         LinearLayout box = new LinearLayout(this);
         box.setOrientation(LinearLayout.VERTICAL);
-        box.setGravity(Gravity.CENTER);
-        box.setPadding(Ui.dp(this, 32), 0, Ui.dp(this, 32), 0);
-        TextView t = Ui.text(this, msg, 16, Ui.TEXT, false);
-        t.setGravity(Gravity.CENTER);
+        box.setGravity(Gravity.CENTER_VERTICAL);
+        box.setPadding(Ui.dp(this, 28), 0, Ui.dp(this, 28), 0);
+        box.addView(Ui.label(this, "Não foi possível abrir", Ui.ACCENT));
+        TextView h = Ui.display(this, "Algo deu\n*errado.*", 48);
+        h.setPadding(0, Ui.dp(this, 14), 0, 0);
+        box.addView(h);
+        TextView t = Ui.text(this, msg, 16, Ui.INK2, false);
+        t.setPadding(0, Ui.dp(this, 16), 0, 0);
         box.addView(t);
         TextView b = Ui.button(this, "Voltar", true);
         b.setOnClickListener(new View.OnClickListener() {
@@ -292,10 +316,12 @@ public class ViewerActivity extends Activity {
                 finish();
             }
         });
-        box.addView(b, Ui.lpMargins(-2, -2, 0, Ui.dp(this, 24), 0, 0));
+        box.addView(b, Ui.lpMargins(-2, -2, 0, Ui.dp(this, 28), 0, 0));
         box.setBackgroundColor(Ui.BG);
         root.addView(box, new FrameLayout.LayoutParams(-1, -1));
+        bottomBar.setVisibility(View.GONE);
         topBar.bringToFront();
+        Ui.stagger(box, 80);
     }
 
     private void moreMenu(View anchor) {
@@ -347,57 +373,37 @@ public class ViewerActivity extends Activity {
     private void info() {
         if (doc == null) return;
         long size = "file".equals(openUri.getScheme()) ? new File(openUri.getPath()).length() : Files.size(this, openUri);
-        String msg = "Nome: " + name + "\nPáginas: " + doc.count + "\nTamanho: " + (size > 0 ? Ui.size(size) : "desconhecido")
-                + "\nPágina 1: " + Math.round(doc.w[0] / 72f * 25.4f) + " × " + Math.round(doc.h[0] / 72f * 25.4f) + " mm";
-        new AlertDialog.Builder(this).setTitle("Informações").setMessage(msg).setPositiveButton("OK", null).show();
+        Sheet.facts(this, "Sobre este\n*documento*", new String[][]{
+                {"Nome", name},
+                {"Páginas", String.valueOf(doc.count)},
+                {"Tamanho", size > 0 ? Ui.size(size) : "—"},
+                {"Formato", Math.round(doc.w[0] / 72f * 25.4f) + " × " + Math.round(doc.h[0] / 72f * 25.4f) + " mm"},
+                {"Lendo", "Página " + (pdfView.getCurrentPage() + 1)}});
     }
 
     private void goToDialog() {
         if (doc == null) return;
-        final EditText input = new EditText(this);
-        input.setInputType(InputType.TYPE_CLASS_NUMBER);
-        input.setHint("1 – " + doc.count);
-        input.setImeOptions(EditorInfo.IME_ACTION_DONE);
-        FrameLayout wrap = new FrameLayout(this);
-        int p = Ui.dp(this, 20);
-        wrap.setPadding(p, Ui.dp(this, 8), p, 0);
-        wrap.addView(input);
-        final AlertDialog dlg = new AlertDialog.Builder(this).setTitle("Ir para a página").setView(wrap)
-                .setPositiveButton("Ir", new DialogInterface.OnClickListener() {
-                    @Override
-                    public void onClick(DialogInterface d, int w) {
-                        try {
-                            int n = Integer.parseInt(input.getText().toString().trim());
-                            pdfView.goToPage(n - 1);
-                        } catch (Exception ignored) {
-                        }
-                    }
-                }).setNegativeButton("Cancelar", null).create();
-        dlg.getWindow().setSoftInputMode(WindowManager.LayoutParams.SOFT_INPUT_STATE_VISIBLE);
-        dlg.show();
+        Sheet.input(this, "Ir para a\n*página*", "1 – " + doc.count, true, "Ir", new Sheet.TextCallback() {
+            @Override
+            public void onText(String s) {
+                try {
+                    pdfView.goToPage(Integer.parseInt(s) - 1);
+                } catch (Exception ignored) {
+                }
+            }
+        });
     }
 
     // ------------------------------------------------------------------ busca
 
     private void searchDialog() {
         if (doc == null) return;
-        final EditText input = new EditText(this);
-        input.setHint("Palavra ou frase");
-        input.setSingleLine();
-        FrameLayout wrap = new FrameLayout(this);
-        int p = Ui.dp(this, 20);
-        wrap.setPadding(p, Ui.dp(this, 8), p, 0);
-        wrap.addView(input);
-        AlertDialog dlg = new AlertDialog.Builder(this).setTitle("Buscar no documento").setView(wrap)
-                .setPositiveButton("Buscar", new DialogInterface.OnClickListener() {
-                    @Override
-                    public void onClick(DialogInterface d, int w) {
-                        String q = input.getText().toString().trim();
-                        if (q.length() > 0) runSearch(q);
-                    }
-                }).setNegativeButton("Cancelar", null).create();
-        dlg.getWindow().setSoftInputMode(WindowManager.LayoutParams.SOFT_INPUT_STATE_VISIBLE);
-        dlg.show();
+        Sheet.input(this, "Buscar no\n*documento*", "Palavra ou frase", false, "Buscar", new Sheet.TextCallback() {
+            @Override
+            public void onText(String q) {
+                runSearch(q);
+            }
+        });
     }
 
     static String fold(String s) {
@@ -405,7 +411,7 @@ public class ViewerActivity extends Activity {
     }
 
     private void runSearch(final String query) {
-        final AlertDialog progress = new AlertDialog.Builder(this).setMessage("Buscando \"" + query + "\"…").setCancelable(false).show();
+        final Sheet progress = Sheet.loading(this, "Procurando \u201c" + query + "\u201d…");
         new Thread(new Runnable() {
             @Override
             public void run() {
@@ -444,19 +450,25 @@ public class ViewerActivity extends Activity {
                             return;
                         }
                         if (hits.isEmpty()) {
-                            new AlertDialog.Builder(ViewerActivity.this).setTitle("Nada encontrado")
-                                    .setMessage("Nenhum resultado para \"" + query + "\".\n\nSe o PDF for digitalizado (imagem), não há texto para buscar.")
-                                    .setPositiveButton("OK", null).show();
+                            Sheet.info(ViewerActivity.this, "Nada\n*encontrado.*",
+                                    "Nenhum resultado para \u201c" + query + "\u201d. Se o PDF for digitalizado (imagem), não há texto para buscar.");
                             return;
                         }
-                        new AlertDialog.Builder(ViewerActivity.this)
-                                .setTitle(hits.size() + (hits.size() == 1 ? " resultado" : " resultados"))
-                                .setItems(snippets.toArray(new String[0]), new DialogInterface.OnClickListener() {
+                        String[] heads = new String[snippets.size()];
+                        String[] texts = new String[snippets.size()];
+                        for (int k = 0; k < snippets.size(); k++) {
+                            String sn = snippets.get(k);
+                            int sep = sn.indexOf("  ·  ");
+                            heads[k] = sn.substring(0, sep);
+                            texts[k] = sn.substring(sep + 5);
+                        }
+                        Sheet.list(ViewerActivity.this, hits.size() + (hits.size() == 1 ? " resultado" : " resultados"),
+                                "para \u201c" + query + "\u201d", heads, texts, new Ui.MenuCallback() {
                                     @Override
-                                    public void onClick(DialogInterface d, int which) {
-                                        pdfView.goToPage(hits.get(which)[0]);
+                                    public void onItem(int id) {
+                                        pdfView.goToPage(hits.get(id - 1)[0]);
                                     }
-                                }).setNegativeButton("Fechar", null).show();
+                                });
                     }
                 });
             }

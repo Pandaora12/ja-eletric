@@ -92,7 +92,7 @@ public class PdfView extends View {
                 0, 0, -1, 0, 255,
                 0, 0, 0, 1, 0});
         nightPaint.setColorFilter(new ColorMatrixColorFilter(inv));
-        shadowPaint.setColor(0x22000000);
+        shadowPaint.setColor(0x1A000000);
         gestures = new GestureDetector(c, new GestureDetector.SimpleOnGestureListener() {
             @Override
             public boolean onDown(MotionEvent e) {
@@ -143,7 +143,7 @@ public class PdfView extends View {
 
     public void setNight(boolean n) {
         night = n;
-        bgColor = n ? 0xFF0E0E10 : (Ui.dark ? 0xFF2A2B2F : 0xFFE3E5E8);
+        bgColor = n ? 0xFF050505 : Ui.VIEWER_BG;
         invalidate();
     }
 

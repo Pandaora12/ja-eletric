@@ -1,0 +1,5 @@
+Fontes incluídas (SIL Open Font License 1.1 — https://openfontlicense.org):
+- Instrument Serif — Copyright 2022 The Instrument Serif Project Authors
+- Inter Tight — Copyright 2022 The Inter Project Authors
+- JetBrains Mono — Copyright 2020 The JetBrains Mono Project Authors
+Convertidas de WOFF2 para TTF (subconjunto latino) sem outras alterações.
