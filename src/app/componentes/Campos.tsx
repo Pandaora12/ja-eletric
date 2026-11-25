@@ -65,3 +65,9 @@ export function ListaTexto({ rotulo, valor, muda, dica }: { rotulo: string; valo
     </label>
   );
 }
+
+export function Hora({ rotulo, valor, muda }: { rotulo: string; valor?: string; muda: (v: string) => void }) {
+  return (
+    <label className="campo"><span>{rotulo}</span><input className="entrada" type="time" value={valor ?? ''} onChange={(e) => muda(e.target.value)} /></label>
+  );
+}

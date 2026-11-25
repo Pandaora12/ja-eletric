@@ -1,5 +1,5 @@
 /**
- * Saída dos documentos: gerar PDF, baixar para o computador e enviar no WhatsApp.
+ * Saída dos documentos: baixar o PDF para o computador e enviar no WhatsApp.
  * No app de computador (Tauri) o PDF é gerado pelo Edge/Chrome do sistema, a partir dos mesmos modelos da prévia.
  * No navegador (desenvolvimento), abre a janela de impressão como alternativa.
  */
@@ -8,52 +8,51 @@ import { dadosParaModelo } from './modelos';
 
 export const noApp = typeof window !== 'undefined' && '__TAURI_INTERNALS__' in window;
 
-async function tauri() {
-  const core = await import('@tauri-apps/api/core');
-  return core;
-}
+const invocar = async <T,>(cmd: string, args: Record<string, unknown>) => (await import('@tauri-apps/api/core')).invoke<T>(cmd, args);
 
 export function nomeArquivo(doc: Documento) {
-  return `${NOME_TIPO[doc.tipo]} ${doc.numero || ''} ${doc.cliente || ''}`.replace(/\s+/g, ' ').trim();
+  return `${NOME_TIPO[doc.tipo]} ${doc.numero || ''} ${doc.cliente || ''}`.replace(/[\\/:*?"<>|]+/g, '-').replace(/\s+/g, ' ').trim();
 }
 
-/** Gera o PDF e devolve o caminho (no app). */
-export async function gerarPdf(doc: Documento): Promise<string> {
-  const modelo = MODELO[doc.tipo];
-  if (!modelo) throw new Error('Este tipo de documento ainda não tem modelo de PDF.');
-  if (!noApp) throw new Error('O PDF é gerado no app de computador. No navegador, use "Imprimir" e escolha "Salvar como PDF".');
-  const { invoke } = await tauri();
-  return invoke<string>('gerar_pdf', { modelo, dados: dadosParaModelo(doc), nome: nomeArquivo(doc) });
-}
-
-/** Pergunta onde salvar e copia o PDF para lá. */
-export async function baixarPdf(doc: Documento): Promise<string | null> {
-  if (!noApp) { imprimirNoNavegador(doc); return null; }
-  const caminho = await gerarPdf(doc);
-  const { save } = await import('@tauri-apps/plugin-dialog');
-  const destino = await save({ defaultPath: nomeArquivo(doc) + '.pdf', filters: [{ name: 'PDF', extensions: ['pdf'] }] });
-  if (!destino) return null;
-  const { invoke } = await tauri();
-  await invoke('salvar_copia', { origem: caminho, destino });
-  try { const { revealItemInDir } = await import('@tauri-apps/plugin-opener'); await revealItemInDir(destino); } catch { /* opcional */ }
-  return destino;
+function modeloDe(doc: Documento) {
+  const m = MODELO[doc.tipo];
+  if (!m) throw new Error('Este tipo de documento ainda não tem modelo de PDF.');
+  return m;
 }
 
 /**
- * Gera o PDF, deixa o arquivo copiado (Ctrl+V cola na conversa) e abre o WhatsApp para a pessoa escolher o contato.
- * O WhatsApp não aceita anexar arquivo por link, por isso o arquivo vai pela área de transferência.
+ * Abre a janela "Salvar como" primeiro (resposta imediata) e depois gera o PDF direto no lugar escolhido.
+ * `aoGerar` avisa a tela que o PDF começou a ser gerado (para mostrar "Gerando…").
  */
-export async function enviarWhatsApp(doc: Documento, mensagem: string): Promise<{ copiado: boolean }> {
-  const texto = encodeURIComponent(mensagem);
-  if (!noApp) { window.open(`https://web.whatsapp.com/send?text=${texto}`, '_blank'); return { copiado: false }; }
-  const caminho = await gerarPdf(doc);
-  const { invoke } = await tauri();
+export async function baixarPdf(doc: Documento, aoGerar?: () => void): Promise<string | null> {
+  const modelo = modeloDe(doc);
+  if (!noApp) { imprimirNoNavegador(doc); return null; }
+  const { save } = await import('@tauri-apps/plugin-dialog');
+  const destino = await save({ title: 'Salvar PDF', defaultPath: nomeArquivo(doc) + '.pdf', filters: [{ name: 'PDF', extensions: ['pdf'] }] });
+  if (!destino) return null;
+  aoGerar?.();
+  const caminho = await invocar<string>('salvar_pdf', { modelo, dados: dadosParaModelo(doc), destino });
+  try { await invocar('mostrar_na_pasta', { caminho }); } catch { /* opcional */ }
+  return caminho;
+}
+
+/**
+ * Abre o WhatsApp na hora (com a mensagem pronta), gera o PDF e deixa o arquivo copiado:
+ * a pessoa escolhe o contato e aperta Ctrl+V para colar o PDF na conversa.
+ * O WhatsApp não aceita anexar arquivo por link, por isso o PDF vai pela área de transferência.
+ */
+export async function enviarWhatsApp(doc: Documento, mensagem: string): Promise<{ onde: string; copiado: boolean; caminho?: string }> {
+  const modelo = modeloDe(doc);
+  if (!noApp) {
+    window.open(`https://web.whatsapp.com/send?text=${encodeURIComponent(mensagem)}`, '_blank');
+    return { onde: 'web', copiado: false };
+  }
+  const onde = await invocar<string>('abrir_whatsapp', { texto: mensagem });
+  const caminho = await invocar<string>('gerar_pdf', { modelo, dados: dadosParaModelo(doc), nome: nomeArquivo(doc) });
   let copiado = false;
-  try { await invoke('copiar_arquivo', { caminho }); copiado = true; } catch { copiado = false; }
-  const { openUrl, revealItemInDir } = await import('@tauri-apps/plugin-opener');
-  try { await openUrl(`whatsapp://send?text=${texto}`); } catch { await openUrl(`https://web.whatsapp.com/send?text=${texto}`); }
-  if (!copiado) { try { await revealItemInDir(caminho); } catch { /* opcional */ } }
-  return { copiado };
+  try { await invocar('copiar_arquivo', { caminho }); copiado = true; } catch { copiado = false; }
+  if (!copiado) { try { await invocar('mostrar_na_pasta', { caminho }); } catch { /* opcional */ } }
+  return { onde, copiado, caminho };
 }
 
 export function imprimirNoNavegador(doc: Documento) {

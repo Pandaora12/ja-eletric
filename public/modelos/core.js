@@ -139,5 +139,29 @@
     if (document.fonts) await document.fonts.ready;
   }
 
-  window.JA = { preparar, EMPRESA_PADRAO, esc, rich, BRL, pad2, dataCurta, dataLonga, somaDias, extenso, marca, rodape, numerarPaginas, fluxo };
+  // diminui a fonte de um valor até caber na largura disponível (ex.: R$ 500.000,00 no quadro preto)
+  function caber(el, minimoPx) {
+    if (!el) return;
+    el.style.whiteSpace = 'nowrap'; el.style.overflow = 'hidden'; el.style.fontSize = '';
+    let px = parseFloat(getComputedStyle(el).fontSize);
+    const min = minimoPx || 11;
+    for (let i = 0; i < 40 && el.scrollWidth > el.clientWidth + 1 && px > min; i++) { px -= 1; el.style.fontSize = px + 'px'; }
+  }
+  function ajustarValores() {
+    document.querySelectorAll('[data-caber], .valor .v, .cobra .cv .v, .kpi.main .v, .invest .v, .cb .tot .v, .parc .v, .totalbox .v').forEach(el => caber(el));
+  }
+  // prévia do app: recebe dados novos e redesenha na hora, sem recarregar a página
+  function ouvirPrevia(desenhar) {
+    const avisarAltura = () => { try { parent.postMessage({ tipo: 'ja-altura', h: document.documentElement.scrollHeight }, '*'); } catch (e) { /* sem janela pai */ } };
+    let fila = null, rodando = false;
+    const rodar = async () => {
+      if (rodando || !fila) return;
+      rodando = true; window.DOC = fila; fila = null;
+      try { await desenhar(); } finally { rodando = false; avisarAltura(); if (fila) rodar(); }
+    };
+    window.addEventListener('message', e => { if (e.data && e.data.tipo === 'ja-doc') { fila = e.data.dados; rodar(); } });
+    avisarAltura();
+  }
+
+  window.JA = { caber, ajustarValores, ouvirPrevia, preparar, EMPRESA_PADRAO, esc, rich, BRL, pad2, dataCurta, dataLonga, somaDias, extenso, marca, rodape, numerarPaginas, fluxo };
 })();

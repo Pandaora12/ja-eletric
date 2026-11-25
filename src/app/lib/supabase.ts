@@ -1,8 +1,9 @@
-import { createClient, type SupabaseClient } from '@supabase/supabase-js';
+import type { SupabaseClient } from '@supabase/supabase-js';
 
-const url = import.meta.env.VITE_SUPABASE_URL as string | undefined;
-const chave = import.meta.env.VITE_SUPABASE_ANON_KEY as string | undefined;
-
-/** null = modo local (sem Supabase): login e documentos ficam só neste computador. */
-export const supabase: SupabaseClient | null = url && chave ? createClient(url, chave) : null;
-export const modoLocal = !supabase;
+/**
+ * O app funciona 100% neste computador, sem internet e sem login (perfil local).
+ * A integração com o Supabase (nuvem) fica preparada em supabase/ para uma versão futura,
+ * mas está desligada aqui de propósito.
+ */
+export const supabase: SupabaseClient | null = null;
+export const modoLocal = true;

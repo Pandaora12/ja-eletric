@@ -5,14 +5,22 @@
 //! 2. grava `dados.js` com os dados do documento;
 //! 3. imprime o HTML com o navegador do sistema em modo headless
 //!    (Edge no Windows, que já vem instalado; Chrome/Edge/Chromium no Mac e Linux).
+//!
+//! O navegador às vezes não fecha sozinho no Windows. Por isso não esperamos ele terminar:
+//! acompanhamos o arquivo PDF e, quando ele para de crescer, encerramos o processo.
+//! Se nada sair em 45 s, tentamos de novo com outra opção de modo headless.
 
 use std::fs;
+use std::io::Write;
 use std::path::{Path, PathBuf};
-use std::process::Command;
-use std::time::{SystemTime, UNIX_EPOCH};
+use std::process::{Command, Stdio};
+use std::thread::sleep;
+use std::time::{Duration, Instant, SystemTime, UNIX_EPOCH};
 
 #[cfg(windows)]
 use std::os::windows::process::CommandExt;
+
+const SEM_JANELA: u32 = 0x0800_0000; // CREATE_NO_WINDOW
 
 /// Caminhos onde costuma estar um navegador baseado em Chromium.
 fn candidatos_navegador() -> Vec<PathBuf> {
@@ -29,6 +37,8 @@ fn candidatos_navegador() -> Vec<PathBuf> {
                 v.push(d.join(r"Google\Chrome\Application\chrome.exe"));
             }
         }
+        v.push(PathBuf::from(r"C:\Program Files (x86)\Microsoft\Edge\Application\msedge.exe"));
+        v.push(PathBuf::from(r"C:\Program Files\Microsoft\Edge\Application\msedge.exe"));
     }
     #[cfg(target_os = "macos")]
     {
@@ -48,6 +58,15 @@ fn candidatos_navegador() -> Vec<PathBuf> {
 
 pub fn achar_navegador() -> Option<PathBuf> {
     candidatos_navegador().into_iter().find(|p| p.exists())
+}
+
+/// Registro simples de erros, para diagnosticar problemas no computador do usuário.
+pub fn registrar(pasta_log: &Path, msg: &str) {
+    let _ = fs::create_dir_all(pasta_log);
+    if let Ok(mut f) = fs::OpenOptions::new().create(true).append(true).open(pasta_log.join("ja-documentos.log")) {
+        let t = SystemTime::now().duration_since(UNIX_EPOCH).map(|d| d.as_secs()).unwrap_or(0);
+        let _ = writeln!(f, "[{t}] {msg}");
+    }
 }
 
 fn copiar_pasta(de: &Path, para: &Path) -> std::io::Result<()> {
@@ -74,11 +93,88 @@ pub fn nome_seguro(nome: &str) -> String {
     if n.is_empty() { "documento".into() } else { n }
 }
 
-/// Gera o PDF e devolve o caminho do arquivo.
+fn url_de_arquivo(p: &Path) -> String {
+    let s = p.to_string_lossy().replace('\\', "/");
+    let mut out = String::new();
+    for c in s.chars() {
+        match c {
+            ' ' => out.push_str("%20"),
+            '#' => out.push_str("%23"),
+            '%' => out.push_str("%25"),
+            '?' => out.push_str("%3F"),
+            _ => out.push(c),
+        }
+    }
+    if out.starts_with('/') { format!("file://{out}") } else { format!("file:///{out}") }
+}
+
+/// Espera o PDF aparecer e parar de crescer; encerra o navegador ao fim. true = gerou.
+fn imprimir(navegador: &Path, url: &str, perfil: &Path, saida: &Path, modo_headless: &str, prazo: Duration) -> Result<bool, String> {
+    let _ = fs::remove_file(saida);
+    let mut cmd = Command::new(navegador);
+    cmd.arg(modo_headless)
+        .arg("--disable-gpu")
+        .arg("--no-first-run")
+        .arg("--no-default-browser-check")
+        .arg("--disable-extensions")
+        .arg("--disable-sync")
+        .arg("--no-sandbox")
+        .arg("--allow-file-access-from-files")
+        .arg(format!("--user-data-dir={}", perfil.display()))
+        .arg("--no-pdf-header-footer")
+        .arg("--run-all-compositor-stages-before-draw")
+        .arg("--virtual-time-budget=10000")
+        .arg(format!("--print-to-pdf={}", saida.display()))
+        .arg(url)
+        .stdin(Stdio::null())
+        .stdout(Stdio::null())
+        .stderr(Stdio::null());
+    #[cfg(windows)]
+    cmd.creation_flags(SEM_JANELA);
+    #[cfg(not(windows))]
+    let _ = SEM_JANELA;
+
+    let mut filho = cmd.spawn().map_err(|e| format!("não consegui abrir o navegador ({}): {e}", navegador.display()))?;
+    let inicio = Instant::now();
+    let mut ultimo = 0u64;
+    let mut estavel_desde: Option<Instant> = None;
+    loop {
+        let tam = fs::metadata(saida).map(|m| m.len()).unwrap_or(0);
+        if tam > 0 {
+            if tam == ultimo {
+                let desde = *estavel_desde.get_or_insert_with(Instant::now);
+                if desde.elapsed() >= Duration::from_millis(700) {
+                    break;
+                }
+            } else {
+                ultimo = tam;
+                estavel_desde = None;
+            }
+        }
+        if let Ok(Some(_)) = filho.try_wait() {
+            // terminou: dá um instante para o arquivo aparecer por completo
+            sleep(Duration::from_millis(300));
+            break;
+        }
+        if inicio.elapsed() > prazo {
+            break;
+        }
+        sleep(Duration::from_millis(200));
+    }
+    let _ = filho.kill();
+    let _ = filho.wait();
+    let ok = fs::metadata(saida).map(|m| m.len() > 1000).unwrap_or(false);
+    Ok(ok)
+}
+
+/// Gera o PDF em `saida` (caminho completo do arquivo).
 /// `modelo`: "orcamento" | "recibo" | "pix". `dados`: JSON do documento.
-pub fn gerar(modelos: &Path, trabalho: &Path, destino_dir: &Path, modelo: &str, dados: &serde_json::Value, nome: &str) -> Result<PathBuf, String> {
+pub fn gerar_em(modelos: &Path, trabalho: &Path, saida: &Path, modelo: &str, dados: &serde_json::Value) -> Result<(), String> {
     if !["orcamento", "recibo", "pix"].contains(&modelo) {
         return Err(format!("Modelo desconhecido: {modelo}"));
+    }
+    if !modelos.join(format!("{modelo}.html")).exists() {
+        return Err(format!("Os modelos dos documentos não foram encontrados em {}. Reinstale o app.", modelos.display()));
     }
     let navegador = achar_navegador().ok_or(
         "Não encontrei o Microsoft Edge nem o Google Chrome neste computador. Instale um deles para gerar o PDF.".to_string(),
@@ -89,46 +185,42 @@ pub fn gerar(modelos: &Path, trabalho: &Path, destino_dir: &Path, modelo: &str, 
     copiar_pasta(modelos, &pasta).map_err(|e| format!("Não consegui preparar os modelos: {e}"))?;
     let js = format!("window.DOC = {};\n", serde_json::to_string(dados).map_err(|e| e.to_string())?);
     fs::write(pasta.join("dados.js"), js).map_err(|e| e.to_string())?;
-
-    fs::create_dir_all(destino_dir).map_err(|e| e.to_string())?;
-    let saida = destino_dir.join(format!("{}.pdf", nome_seguro(nome)));
-    let _ = fs::remove_file(&saida);
-
-    let html = pasta.join(format!("{modelo}.html"));
-    let url = url_de_arquivo(&html);
-    let perfil = pasta.join("perfil-navegador");
-
-    let mut cmd = Command::new(&navegador);
-    cmd.arg("--headless=new")
-        .arg("--disable-gpu")
-        .arg("--no-first-run")
-        .arg("--no-default-browser-check")
-        .arg("--disable-extensions")
-        .arg("--allow-file-access-from-files")
-        .arg(format!("--user-data-dir={}", perfil.display()))
-        .arg("--no-pdf-header-footer")
-        .arg("--run-all-compositor-stages-before-draw")
-        .arg("--virtual-time-budget=15000")
-        .arg(format!("--print-to-pdf={}", saida.display()))
-        .arg(url);
-    #[cfg(windows)]
-    cmd.creation_flags(0x0800_0000); // CREATE_NO_WINDOW: não abre janela preta
-
-    let out = cmd.output().map_err(|e| format!("Falha ao abrir o navegador para gerar o PDF: {e}"))?;
-    let _ = fs::remove_dir_all(&pasta);
-    if !saida.exists() {
-        return Err(format!(
-            "O navegador não gerou o PDF. {}",
-            String::from_utf8_lossy(&out.stderr).lines().last().unwrap_or("")
-        ));
+    if let Some(p) = saida.parent() {
+        fs::create_dir_all(p).map_err(|e| format!("Não consegui criar a pasta de destino: {e}"))?;
     }
-    Ok(saida)
+
+    // gera primeiro numa pasta temporária (caminho simples) e depois copia para o destino
+    let temp = pasta.join("saida.pdf");
+    let url = url_de_arquivo(&pasta.join(format!("{modelo}.html")));
+    let mut ok = false;
+    let mut detalhe = String::new();
+    for (i, modo) in ["--headless=new", "--headless"].iter().enumerate() {
+        let perfil = pasta.join(format!("perfil-{i}"));
+        match imprimir(&navegador, &url, &perfil, &temp, modo, Duration::from_secs(45)) {
+            Ok(true) => { ok = true; break; }
+            Ok(false) => detalhe = format!("o navegador não gerou o arquivo ({modo})"),
+            Err(e) => { detalhe = e; break; }
+        }
+    }
+    let resultado = if ok {
+        fs::copy(&temp, saida).map(|_| ()).map_err(|e| format!("Não consegui salvar o PDF em {}: {e}", saida.display()))
+    } else {
+        Err(format!("Não consegui gerar o PDF: {detalhe}. Navegador usado: {}", navegador.display()))
+    };
+    let _ = fs::remove_dir_all(&pasta);
+    resultado
 }
 
-fn url_de_arquivo(p: &Path) -> String {
-    let s = p.to_string_lossy().replace('\\', "/");
-    let s = s.replace(' ', "%20").replace('#', "%23");
-    if s.starts_with('/') { format!("file://{s}") } else { format!("file:///{s}") }
+/// Codifica texto para ir numa URL (mensagem do WhatsApp).
+pub fn codificar_url(s: &str) -> String {
+    let mut out = String::new();
+    for b in s.as_bytes() {
+        match *b {
+            b'A'..=b'Z' | b'a'..=b'z' | b'0'..=b'9' | b'-' | b'_' | b'.' | b'~' => out.push(*b as char),
+            _ => out.push_str(&format!("%{:02X}", b)),
+        }
+    }
+    out
 }
 
 /// Copia o arquivo para a área de transferência, para colar (Ctrl+V) direto na conversa do WhatsApp.
@@ -140,8 +232,8 @@ pub fn copiar_arquivo_area_transferencia(caminho: &Path) -> Result<(), String> {
     {
         let p = caminho.to_string_lossy().replace('\'', "''");
         let st = Command::new("powershell")
-            .args(["-NoProfile", "-NonInteractive", "-Command", &format!("Set-Clipboard -Path '{p}'")])
-            .creation_flags(0x0800_0000)
+            .args(["-NoProfile", "-NonInteractive", "-ExecutionPolicy", "Bypass", "-Command", &format!("Set-Clipboard -Path '{p}'")])
+            .creation_flags(SEM_JANELA)
             .status()
             .map_err(|e| e.to_string())?;
         return if st.success() { Ok(()) } else { Err("Não consegui copiar o arquivo.".into()) };
@@ -169,6 +261,11 @@ mod testes {
         assert_eq!(nome_seguro("..."), "documento");
     }
 
+    #[test]
+    fn url_codificada() {
+        assert_eq!(codificar_url("Olá R$ 10"), "Ol%C3%A1%20R%24%2010");
+    }
+
     /// Gera um recibo de verdade se houver navegador (JA_NAVEGADOR_PDF ou instalado).
     #[test]
     fn gera_recibo() {
@@ -183,7 +280,8 @@ mod testes {
             "pagador": {"nome": "Cliente Teste"},
             "itens": [{"descricao": "Serviço", "tipo": "servico", "valor": 100}]
         });
-        let pdf = gerar(&raiz, &tmp, &tmp.join("saida"), "recibo", &dados, "Recibo teste").expect("gerou");
-        assert!(fs::metadata(&pdf).unwrap().len() > 10_000);
+        let saida = tmp.join("saida com espaço").join("Recibo teste.pdf");
+        gerar_em(&raiz, &tmp, &saida, "recibo", &dados).expect("gerou");
+        assert!(fs::metadata(&saida).unwrap().len() > 10_000);
     }
 }

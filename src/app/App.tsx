@@ -1,69 +1,86 @@
-import { useEffect } from 'react';
+import { useEffect, useState } from 'react';
 import { AnimatePresence, motion } from 'framer-motion';
 import { useApp } from './estado';
 import { ABAS } from './tipos';
-import { Acesso } from './telas/Acesso';
+import { Acesso, Avatar } from './telas/Acesso';
 import { TelaDocumento } from './telas/TelaDocumento';
-import { Chat } from './componentes/Chat';
+import { TelaClientes } from './telas/TelaClientes';
+import { TelaNormas } from './telas/TelaNormas';
 import { Painel } from './componentes/Painel';
-import { IconeSair } from './componentes/Icones';
+import { Paisagem } from './componentes/Paisagem';
+import { Relogio } from './componentes/Relogio';
+import { Bichinho } from './componentes/Bichinho';
+import { IconeSol } from './componentes/Icones';
 import './estilo.css';
 
-const COR_PONTO: Record<string, string> = { aurora: '#00e5a0', floresta: '#c8f53b', oceano: '#00d1ff', deserto: '#ffc300', canion: '#ff5fa2' };
-
 export default function App() {
-  const { pronto, usuario, aba, irPara, iniciar, sair } = useApp();
+  const { pronto, perfil, dentro, aba, irPara, iniciar, brilho } = useApp();
   useEffect(() => { iniciar(); }, [iniciar]);
-  const paisagem = ABAS.find((a) => a.id === aba)?.paisagem ?? 'aurora';
-  useEffect(() => { document.documentElement.dataset.paisagem = usuario ? paisagem : 'aurora'; }, [paisagem, usuario]);
 
-  const ceu = <div className="ceu" aria-hidden><i /><i /><i /></div>;
-  if (!pronto) return <>{ceu}</>;
-  if (!usuario) return <>{ceu}<Acesso /><Aviso /></>;
-
-  const iniciais = (usuario.nome || usuario.email).split(/\s+/).map((p) => p[0]).slice(0, 2).join('').toUpperCase();
+  const fundo = <Paisagem />;
+  const escuro = <div className="escurecer" aria-hidden style={{ opacity: (100 - brilho) / 100 }} />;
+  if (!pronto) return fundo;
+  if (!perfil || !dentro) return <>{fundo}<Acesso /><Claridade />{escuro}<Aviso /></>;
 
   return (
     <>
-      {ceu}
+      {fundo}
       <div className="app">
         <header className="topo">
           <div className="marca-app">
             <img src="/modelos/logo-ja.png" alt="" />
-            <div><b>J.A Documentos</b><small>{usuario.empresa || 'J.A Eletricidades'}</small></div>
+            <b>J.A Documentos</b>
           </div>
           <nav className="abas">
             {ABAS.map((a) => (
-              <button key={a.id} className={`aba ${aba === a.id ? 'ativa' : ''}`} onClick={() => irPara(a.id)} title={a.descricao}>
+              <button key={a.id} className={`aba ${aba === a.id ? 'ativa' : ''}`} onClick={() => irPara(a.id)}>
                 {aba === a.id && <motion.span layoutId="pilula" className="pilula" transition={{ type: 'spring', stiffness: 380, damping: 32 }} />}
-                <span className="ponto" style={{ background: COR_PONTO[a.paisagem] }} />{a.nome}
+                {a.nome}
               </button>
             ))}
           </nav>
           <div className="usuario-menu">
-            <div style={{ textAlign: 'right' }} className="nome-u">
-              <div style={{ fontWeight: 700 }}>{usuario.nome || usuario.email}</div>
-              {usuario.codigoConvite && <div style={{ fontSize: 12, color: 'var(--texto-3)' }} title="Passe este código para outra pessoa da empresa se cadastrar">Convite: {usuario.codigoConvite}</div>}
-            </div>
-            <div className="avatar">{iniciais}</div>
-            <button className="btn icone-btn" title="Sair" onClick={() => { if (confirm('Sair da conta?')) sair(); }}><IconeSair /></button>
+            <div className="nome-u">{perfil.nome}</div>
+            <Avatar nome={perfil.nome} foto={perfil.foto} />
           </div>
         </header>
 
+        <div className="faixa-relogio"><Relogio /></div>
+
         <main className="conteudo">
           <AnimatePresence mode="wait">
-            <motion.div key={aba} style={{ height: '100%' }} initial={{ opacity: 0, y: 14 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -10 }} transition={{ duration: 0.28 }}>
-              {aba === 'inicio' ? (
-                <div className="inicio"><Chat /><Painel /></div>
-              ) : (
-                <TelaDocumento tipo={aba} />
-              )}
+            <motion.div key={aba} style={{ height: '100%' }} initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -8 }} transition={{ duration: 0.25 }}>
+              {aba === 'inicio' ? <Painel />
+                : aba === 'clientes' ? <TelaClientes />
+                : aba === 'normas' ? <TelaNormas />
+                : <TelaDocumento tipo={aba} />}
             </motion.div>
           </AnimatePresence>
         </main>
       </div>
+      <Bichinho />
+      <Claridade />
+      {escuro}
       <Aviso />
     </>
+  );
+}
+
+/** Controle de claridade da tela (canto inferior esquerdo). */
+function Claridade() {
+  const { brilho, mudarBrilho } = useApp();
+  const [aberto, setAberto] = useState(false);
+  return (
+    <div className="claridade">
+      <button className="btn icone-btn" title="Claridade da tela" onClick={() => setAberto(!aberto)}><IconeSol /></button>
+      {aberto && (
+        <div className="claridade-painel vidro">
+          <span className="rotulo">Claridade</span>
+          <input type="range" min={40} max={100} step={5} value={brilho} onChange={(e) => mudarBrilho(Number(e.target.value))} />
+          <b>{brilho}%</b>
+        </div>
+      )}
+    </div>
   );
 }
 

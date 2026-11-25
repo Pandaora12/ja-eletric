@@ -1,13 +1,17 @@
 /* J.A Eletricidades · recibo de prestação de serviço a partir de window.DOC */
-(async function () {
-  await JA.preparar(['logo-ja.png', 'assinatura.png']);
+async function desenhar() {
+  document.getElementById('doc').innerHTML = '';
   const { esc, rich, BRL, dataCurta, dataLonga, extenso, rodape } = JA;
   const D = window.DOC, E = Object.assign({}, JA.EMPRESA_PADRAO, D.empresa || {});
   const PIX = Object.assign({}, E.pix, D.pix_dados || {});
   const itens = D.itens || [];
   const total = D.total != null ? D.total : itens.reduce((a, i) => a + Number(i.valor || 0), 0);
   const cidade = D.cidade || 'Atibaia';
-  const pg = D.pagador || {}, loc = D.local || null;
+  const pg = D.pagador || {}, loc = D.local && (D.local.nome || D.local.cidade) ? D.local : null;
+  const pgLinha = [pg.cidade, pg.cep ? 'CEP ' + pg.cep : '', pg.telefone, pg.email].filter(Boolean).join(' · ') || pg.complemento || '';
+  const hora = (h) => (h || '').trim();
+  const horario = hora(D.hora_inicio) && hora(D.hora_fim) ? `${hora(D.hora_inicio)} às ${hora(D.hora_fim)}`
+    : hora(D.hora_inicio) ? `início às ${hora(D.hora_inicio)}` : hora(D.hora_fim) ? `concluído às ${hora(D.hora_fim)}` : '';
   const TIPO = { servico: ['mo', 'Serviço'], material: ['mt', 'Material'] };
   const porTipo = t => itens.filter(i => (i.tipo || 'servico') === t).reduce((a, i) => a + Number(i.valor || 0), 0);
   const resumo = [['Serviço', porTipo('servico')], ['Material', porTipo('material')]].filter(r => r[1]).map(r => `${r[0]} ${BRL(r[1])}`).join(' · ');
@@ -39,13 +43,14 @@
         <div class="ext" style="color:#949D95">${esc(resumo)}</div>
       </div>
     </div>
-    <div class="boxes"${loc ? '' : ' style="grid-template-columns:1fr"'}>
+    <div class="boxes"${loc || horario ? '' : ' style="grid-template-columns:1fr"'}>
       <div class="box">
         <div><div class="lbl">Pagador</div><div class="v">${esc(pg.nome)}${pg.documento ? `<small>${esc(pg.documento)}</small>` : ''}</div></div>
-        ${pg.endereco ? `<div><div class="lbl">Endereço</div><div class="v">${esc(pg.endereco)}${pg.complemento ? `<small>${esc(pg.complemento)}</small>` : ''}</div></div>` : ''}
+        ${pg.endereco || pgLinha ? `<div><div class="lbl">Endereço e contato</div><div class="v">${esc(pg.endereco || '')}${pgLinha ? `<small>${esc(pgLinha)}</small>` : ''}</div></div>` : ''}
       </div>
-      ${loc ? `<div class="box">
-        <div><div class="lbl">Local do serviço</div><div class="v">${esc(loc.nome)}${loc.cidade ? `<small>${esc(loc.cidade)}</small>` : ''}</div></div>
+      ${loc || horario ? `<div class="box">
+        ${loc ? `<div><div class="lbl">Local do serviço</div><div class="v">${esc(loc.nome || '')}${loc.cidade ? `<small>${esc(loc.cidade)}</small>` : ''}</div></div>` : ''}
+        ${horario ? `<div><div class="lbl">Data e horário do serviço</div><div class="v">${dataCurta(D.data_servico || D.data)} · ${esc(horario)}</div></div>` : ''}
         <div><div class="lbl">Prestador</div><div class="v">${esc(E.nome)}</div></div>
       </div>` : ''}
     </div>
@@ -70,5 +75,11 @@
   </div>
   ${rodape(E, D.rodape || 'contato')}`;
   raiz.appendChild(s);
+  JA.ajustarValores();
+}
+(async () => {
+  await JA.preparar(['logo-ja.png', 'assinatura.png']);
+  await desenhar();
   window.__PRONTO = true;
+  JA.ouvirPrevia(desenhar);
 })();

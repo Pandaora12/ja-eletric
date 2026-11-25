@@ -1,85 +1,73 @@
-import { useState } from 'react';
+import { useRef, useState } from 'react';
 import { motion } from 'framer-motion';
-import { cadastrar, entrar } from '../lib/repositorio';
-import { modoLocal } from '../lib/supabase';
 import { useApp } from '../estado';
+import { prepararFoto } from '../lib/perfil';
+import { uid } from '../lib/formato';
+import { Relogio } from '../componentes/Relogio';
+import { IconePessoa } from '../componentes/Icones';
 
-const PAISAGENS = [
-  ['Aurora', 'linear-gradient(120deg,#7c3aed,#00e5a0)'],
-  ['Floresta', 'linear-gradient(120deg,#00a859,#c8f53b)'],
-  ['Oceano', 'linear-gradient(120deg,#0057ff,#00d1ff)'],
-  ['Deserto', 'linear-gradient(120deg,#ff6a00,#ffc300)'],
-  ['Cânion', 'linear-gradient(120deg,#ff2d3a,#c026d3)'],
-];
+/** Foto redonda do perfil (ou as iniciais). */
+export function Avatar({ nome, foto, tamanho = 44 }: { nome: string; foto: string | null; tamanho?: number }) {
+  const iniciais = nome.trim().split(/\s+/).map((p) => p[0]).slice(0, 2).join('').toUpperCase() || '?';
+  return foto
+    ? <img className="avatar" src={foto} alt="" style={{ width: tamanho, height: tamanho }} />
+    : <div className="avatar" style={{ width: tamanho, height: tamanho, fontSize: tamanho * 0.38 }}>{iniciais}</div>;
+}
 
-/** Tela de entrada e cadastro. */
+/**
+ * Entrada do app, como a tela de bloqueio do Windows:
+ * - primeira vez: "Crie seu perfil" (nome e foto opcional);
+ * - depois: aparece só o seu perfil e o botão Entrar.
+ */
 export function Acesso() {
-  const entrarNoApp = useApp((s) => s.entrar);
-  const [modo, setModo] = useState<'entrar' | 'cadastrar'>('entrar');
-  const [f, setF] = useState({ nome: '', email: '', senha: '', empresa: 'J.A Eletricidades', convite: '' });
-  const [erro, setErro] = useState('');
-  const [msg, setMsg] = useState('');
-  const [ocupado, setOcupado] = useState(false);
-  const muda = (k: keyof typeof f) => (e: React.ChangeEvent<HTMLInputElement>) => setF({ ...f, [k]: e.target.value });
+  const { perfil, criarPerfil, entrar, avisar } = useApp();
+  const [editando, setEditando] = useState(!perfil);
+  const [nome, setNome] = useState(perfil?.nome ?? '');
+  const [foto, setFoto] = useState<string | null>(perfil?.foto ?? null);
+  const arquivo = useRef<HTMLInputElement>(null);
 
-  async function enviar(e: React.FormEvent) {
+  async function escolherFoto(f?: File) {
+    if (!f) return;
+    try { setFoto(await prepararFoto(f)); } catch (e: any) { avisar(e.message, 'erro'); }
+  }
+
+  function salvar(e: React.FormEvent) {
     e.preventDefault();
-    setErro(''); setMsg(''); setOcupado(true);
-    try {
-      if (modo === 'entrar') {
-        await entrarNoApp(await entrar(f.email.trim(), f.senha));
-      } else {
-        if (!f.nome.trim()) throw new Error('Informe seu nome.');
-        const r = await cadastrar({ nome: f.nome.trim(), email: f.email.trim(), senha: f.senha, empresa: f.empresa.trim(), codigoConvite: f.convite.trim() });
-        if (r === 'confirmar-email') { setMsg('Cadastro feito! Enviamos um link para o seu e-mail. Confirme e depois entre.'); setModo('entrar'); }
-        else await entrarNoApp(r);
-      }
-    } catch (e: any) {
-      setErro(e.message || 'Algo deu errado.');
-    } finally { setOcupado(false); }
+    if (!nome.trim()) { avisar('Digite seu nome.', 'erro'); return; }
+    criarPerfil({ id: perfil?.id ?? uid(), nome: nome.trim(), foto, criado_em: perfil?.criado_em ?? new Date().toISOString() });
+    setEditando(false);
   }
 
   return (
-    <div className="acesso" data-paisagem="aurora">
-      <div className="lado-arte">
-        <div className="marca-app">
-          <img src="/modelos/logo-ja.png" alt="" />
-          <div><b>J.A Documentos</b><small>J.A Eletricidades</small></div>
-        </div>
-        <motion.div initial={{ opacity: 0, y: 24 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.7 }}>
-          <h1>Fale.<br />O documento<br /><em>sai pronto.</em></h1>
-          <p>Orçamentos, recibos e comprovantes Pix no padrão da J.A. Descreva por voz ou texto, confira e envie pelo WhatsApp.</p>
-        </motion.div>
-        <div className="paisagens">{PAISAGENS.map(([n, g]) => <span key={n} style={{ background: g }}>{n}</span>)}</div>
-      </div>
+    <div className="acesso">
+      <div className="acesso-relogio"><Relogio grande /></div>
 
-      <div className="lado-form">
-        <motion.form className="cartao-acesso vidro" onSubmit={enviar} initial={{ opacity: 0, scale: 0.97 }} animate={{ opacity: 1, scale: 1 }} transition={{ duration: 0.5, delay: 0.1 }}>
-          <div className="troca">
-            <button type="button" className={modo === 'entrar' ? 'on' : ''} onClick={() => { setModo('entrar'); setErro(''); }}>Entrar</button>
-            <button type="button" className={modo === 'cadastrar' ? 'on' : ''} onClick={() => { setModo('cadastrar'); setErro(''); }}>Criar conta</button>
-          </div>
-          <h2>{modo === 'entrar' ? 'Bem-vindo de volta' : 'Criar sua conta'}</h2>
-
-          {modo === 'cadastrar' && (
-            <label className="campo"><span>Seu nome</span><input className="entrada" value={f.nome} onChange={muda('nome')} autoComplete="name" /></label>
-          )}
-          <label className="campo"><span>E-mail</span><input className="entrada" type="email" required value={f.email} onChange={muda('email')} autoComplete="email" /></label>
-          <label className="campo"><span>Senha</span><input className="entrada" type="password" required value={f.senha} onChange={muda('senha')} autoComplete={modo === 'entrar' ? 'current-password' : 'new-password'} /></label>
-          {modo === 'cadastrar' && (
-            <>
-              <label className="campo"><span>Empresa</span><input className="entrada" value={f.empresa} onChange={muda('empresa')} disabled={!!f.convite} /></label>
-              {!modoLocal && (
-                <label className="campo"><span>Código de convite (se alguém da empresa já tem conta)</span><input className="entrada" value={f.convite} onChange={muda('convite')} placeholder="Opcional" /></label>
-              )}
-            </>
-          )}
-
-          {erro && <div className="erro-form">{erro}</div>}
-          {msg && <div style={{ color: 'var(--acento)', fontWeight: 600 }}>{msg}</div>}
-          <button className="btn forte" disabled={ocupado} style={{ height: 56, fontSize: 17 }}>{ocupado ? 'Aguarde…' : modo === 'entrar' ? 'Entrar' : 'Criar conta'}</button>
-          {modoLocal && <div className="nota-local">Modo local: a conta e os documentos ficam salvos só neste computador. Para usar a IA e acessar de outros computadores, configure o Supabase.</div>}
+      {editando ? (
+        <motion.form className="cartao-perfil vidro" onSubmit={salvar} initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }}>
+          <h2>{perfil ? 'Editar perfil' : 'Crie seu perfil'}</h2>
+          <button type="button" className="foto-perfil" onClick={() => arquivo.current?.click()} title="Escolher foto">
+            {foto ? <img src={foto} alt="" /> : <IconePessoa />}
+            <span>{foto ? 'Trocar foto' : 'Adicionar foto'}</span>
+          </button>
+          <input ref={arquivo} type="file" accept="image/*" hidden onChange={(e) => { escolherFoto(e.target.files?.[0]); e.target.value = ''; }} />
+          {foto && <button type="button" className="btn pequeno" onClick={() => setFoto(null)}>Tirar foto</button>}
+          <label className="campo" style={{ width: '100%' }}><span>Seu nome</span><input className="entrada" autoFocus value={nome} onChange={(e) => setNome(e.target.value)} placeholder="Ex.: Jorge Luiz dos Santos" /></label>
+          <button className="btn forte grande">{perfil ? 'Salvar' : 'Criar perfil'}</button>
+          {perfil && <button type="button" className="btn pequeno" onClick={() => setEditando(false)}>Cancelar</button>}
+          <p className="nota">Tudo fica salvo só neste computador. Não precisa de internet.</p>
         </motion.form>
+      ) : perfil && (
+        <motion.div className="cartao-perfil" initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }}>
+          <Avatar nome={perfil.nome} foto={perfil.foto} tamanho={132} />
+          <div className="nome-perfil">{perfil.nome}</div>
+          <button className="btn forte grande" autoFocus onClick={() => entrar()}>Entrar</button>
+          <button className="btn pequeno transparente" onClick={() => setEditando(true)}>Editar perfil</button>
+        </motion.div>
+      )}
+
+      <div className="acesso-marca">
+        <img src="/modelos/logo-ja.png" alt="" />
+        <b>J.A Documentos</b>
       </div>
     </div>
   );

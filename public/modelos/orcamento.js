@@ -1,6 +1,6 @@
 /* J.A Eletricidades · montagem do orçamento a partir de window.DOC */
-(async function () {
-  await JA.preparar([window.DOC.cliente && window.DOC.cliente.logo, ...((window.DOC.fotos || []).map(f => f.arquivo || f)), ...((window.DOC.fotos_referencia || []).map(f => f.arquivo)), 'logo-ja.png', 'assinatura.png']);
+async function desenhar() {
+  document.getElementById('doc').innerHTML = '';
   const { esc, rich, BRL, pad2, dataCurta, dataLonga, somaDias, marca, rodape, numerarPaginas, fluxo } = JA;
   const D = window.DOC, E = Object.assign({}, JA.EMPRESA_PADRAO, D.empresa || {});
   const raiz = document.getElementById('doc');
@@ -13,7 +13,7 @@
   const tipo = t => TIPOS[t] || TIPOS.outro;
   const CORES = ['#14301F', '#2E6B47', '#5FA36B', '#B9824E', '#C8F53B', '#59625B', '#0E6B38', '#8A928B'];
   const STATUS = { aguardando: ['Aguardando<br>aprovação', 'Aguardando aprovação', 'a'], aprovado: ['Aprovado', 'Aprovado', 'b'], rascunho: ['Rascunho', 'Rascunho', 'd'], revisao: ['Revisão', 'Em revisão', 'c'] };
-  const st = STATUS[D.status || 'aguardando'] || STATUS.aguardando;
+  const st = D.status ? (STATUS[D.status] || STATUS.aguardando) : null;
 
   const setores = (D.setores || []).map((s, i) => Object.assign({ cor: s.cor || CORES[i % CORES.length] }, s));
   let num = 0;
@@ -26,7 +26,7 @@
   const pagNota = [D.forma_pagamento, parcelas.map(p => p.quando).filter(Boolean).join(', ')].filter(Boolean).join(' · ');
   const cliCurto = (D.cliente && (D.cliente.nome_curto || (D.cliente.nome || '').split(/\s+(ind|ltda|s\.?a|eireli|me|epp)\b/i)[0])) || '';
   const subCab = [`${D.rotulo_doc || 'Orçamento'} ${D.numero || ''}`.trim(), D.opcao, cliCurto].filter(Boolean).join(' · ');
-  const cab = `<header class="hdr">${marca(E, subCab)}<div class="meta"><span>${esc(D.cidade || 'Atibaia')}, <b>${dataCurta(D.data)}</b></span><span class="live"><i></i><b>${st[1]}</b></span></div></header>`;
+  const cab = `<header class="hdr">${marca(E, subCab)}<div class="meta"><span>${esc(D.cidade || 'Atibaia')}, <b>${dataCurta(D.data)}</b></span>${st ? `<span class="live"><i></i><b>${st[1]}</b></span>` : ''}</div></header>`;
   const rod = rodape(E, D.rodape || 'completo');
   const sec = (k, h, aside, extra) => `<div class="sec"${extra || ''}><div><div class="k">${esc(k)}</div><h2>${h}</h2></div>${aside ? `<div class="aside">${esc(aside)}</div>` : ''}</div>`;
 
@@ -39,7 +39,7 @@
     <div class="marca"><img src="logo-ja.png" alt="${esc(E.nome)}"><div class="nm">J.A Instalações e<br>Manutenções Elétricas<small>${esc(D.slogan || 'Instalações · manutenções · SPDA')}</small></div></div>
     <div class="doc">${esc(D.rotulo_capa || 'Orçamento')}<b>${esc(D.numero || '')}</b><strong class="dt">${esc(D.cidade || 'Atibaia')}, ${dataCurta(D.data)}</strong>${D.opcao ? `<span class="op">${esc(D.opcao)}</span>` : ''}</div>
   </div>
-  <div class="ribbon">${st[0]}</div>
+  ${st ? `<div class="ribbon">${st[0]}</div>` : ''}
   <div class="cb">
     <div class="k">${esc(D.tipo || 'Orçamento')}</div>
     <h1>${esc(D.titulo)}</h1>
@@ -168,5 +168,11 @@
 
   fluxo(raiz, B, { cabecalho: cab, rodape: rod });
   numerarPaginas();
+  JA.ajustarValores();
+}
+(async () => {
+  await JA.preparar([window.DOC.cliente && window.DOC.cliente.logo, ...((window.DOC.fotos || []).map(f => f.arquivo || f)), ...((window.DOC.fotos_referencia || []).map(f => f.arquivo)), 'logo-ja.png', 'assinatura.png']);
+  await desenhar();
   window.__PRONTO = true;
+  JA.ouvirPrevia(desenhar);
 })();
