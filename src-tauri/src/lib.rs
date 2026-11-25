@@ -38,6 +38,24 @@ async fn gerar_pdf(app: tauri::AppHandle, modelo: String, dados: serde_json::Val
     r.map(|_| saida.to_string_lossy().to_string())
 }
 
+/// Grava os bytes do PDF (gerado dentro do app) no caminho escolhido na janela "Salvar como".
+#[tauri::command]
+fn gravar_arquivo(caminho: String, bytes: Vec<u8>) -> Result<(), String> {
+    let p = PathBuf::from(&caminho);
+    if let Some(pasta) = p.parent() { std::fs::create_dir_all(pasta).map_err(|e| e.to_string())?; }
+    std::fs::write(&p, bytes).map_err(|e| format!("Não consegui salvar o arquivo em {caminho}: {e}"))
+}
+
+/// Grava o PDF na pasta de documentos do app (usado no envio pelo WhatsApp) e devolve o caminho.
+#[tauri::command]
+fn gravar_documento(app: tauri::AppHandle, nome: String, bytes: Vec<u8>) -> Result<String, String> {
+    let (_, _, dados) = pastas(&app)?;
+    let p = dados.join("documentos").join(format!("{}.pdf", pdf::nome_seguro(&nome)));
+    std::fs::create_dir_all(p.parent().unwrap()).map_err(|e| e.to_string())?;
+    std::fs::write(&p, bytes).map_err(|e| format!("Não consegui salvar o PDF: {e}"))?;
+    Ok(p.to_string_lossy().to_string())
+}
+
 /// Abre o WhatsApp do computador com a mensagem pronta (a pessoa escolhe o contato).
 /// Se o WhatsApp não estiver instalado, abre o WhatsApp Web no navegador.
 #[tauri::command]
@@ -79,7 +97,7 @@ pub fn run() {
         .plugin(tauri_plugin_fs::init())
         .plugin(tauri_plugin_opener::init())
         .plugin(tauri_plugin_dialog::init())
-        .invoke_handler(tauri::generate_handler![salvar_pdf, gerar_pdf, abrir_whatsapp, copiar_arquivo, mostrar_na_pasta, navegador_pdf])
+        .invoke_handler(tauri::generate_handler![gravar_arquivo, gravar_documento, salvar_pdf, gerar_pdf, abrir_whatsapp, copiar_arquivo, mostrar_na_pasta, navegador_pdf])
         .run(tauri::generate_context!())
         .expect("erro ao iniciar o app");
 }

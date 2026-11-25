@@ -5,7 +5,7 @@ import { brl, dataBR } from '../lib/formato';
 import { NOME_TIPO, type Documento, type TipoDoc } from '../tipos';
 import { Editor } from '../componentes/Editores';
 import { Previa } from '../componentes/Previa';
-import { IconeBaixar, IconeBusca, IconeForm, IconeImprimir, IconeLixo, IconeMais, IconeWhats } from '../componentes/Icones';
+import { IconeBaixar, IconeBusca, IconeForm, IconeLixo, IconeMais, IconeWhats } from '../componentes/Icones';
 import { normalizar } from '../componentes/Seletores';
 import { FORMAS } from '../lib/formas';
 
@@ -41,7 +41,7 @@ export function TelaDocumento({ tipo }: { tipo: TipoDoc }) {
     try {
       const msg = `Olá! Segue o ${NOME_TIPO[d.tipo].toLowerCase()} ${d.numero} da J.A Eletricidades${d.valor ? ` (${brl(d.valor)})` : ''}.`;
       const r = await enviarWhatsApp(d, msg);
-      if (!noApp) avisar('No app de computador, o PDF já vai copiado para colar na conversa.');
+      if (!noApp) avisar('PDF baixado. No app de computador ele já vai copiado para colar na conversa.');
       else if (r.copiado) avisar(`WhatsApp ${r.onde === 'web' ? 'Web aberto no navegador' : 'aberto'}. Escolha o contato e aperte Ctrl+V para colar o PDF.`);
       else avisar('WhatsApp aberto. Arraste o PDF da pasta que abriu para a conversa.');
     } catch (e: any) { avisar(String(e?.message ?? e), 'erro'); }
@@ -101,7 +101,7 @@ export function TelaDocumento({ tipo }: { tipo: TipoDoc }) {
               </label>
               <span>{doc.cliente || 'Sem cliente'}{doc.valor != null ? ` · ${brl(doc.valor)}` : ''}</span>
             </div>
-            <button className="btn acento" disabled={!!ocupado} onClick={() => pdf(doc)}>{noApp ? <IconeBaixar /> : <IconeImprimir />}{ocupado === 'pdf' ? 'Gerando PDF…' : noApp ? 'Baixar PDF' : 'Imprimir / PDF'}</button>
+            <button className="btn acento" disabled={!!ocupado} onClick={() => pdf(doc)}><IconeBaixar />{ocupado === 'pdf' ? 'Gerando PDF…' : 'Baixar PDF'}</button>
             <button className="btn whats" disabled={!!ocupado} onClick={() => whats(doc)}><IconeWhats />{ocupado === 'whats' ? 'Preparando PDF…' : 'Enviar no WhatsApp'}</button>
             <button className="btn icone-btn perigo" title="Excluir" onClick={async () => { if (confirm(`Excluir ${doc.numero}? Não dá para desfazer.`)) { await excluir(doc); avisar('Documento excluído.'); } }}><IconeLixo /></button>
           </div>

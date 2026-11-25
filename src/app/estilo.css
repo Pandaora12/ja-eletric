@@ -243,13 +243,25 @@ input[type='time'].entrada, input[type='date'].entrada { color-scheme: dark; }
 .claridade-painel input { width: 180px; accent-color: #a6d785; }
 
 /* mascote */
-.bichinho { position: fixed; left: 0; bottom: 6px; z-index: 55; width: 96px; cursor: pointer; will-change: transform; }
-.bicho-svg { width: 96px; height: 70px; display: block; filter: drop-shadow(0 4px 6px rgba(0, 0, 0, 0.45)); }
-.bicho-sombra { width: 70px; height: 8px; margin: -6px auto 0; border-radius: 50%; background: rgba(0, 0, 0, 0.35); }
-.bichinho.pose-pulando .bicho-svg { animation: pulo 0.7s ease; }
-.bichinho.pose-olhando .bicho-svg, .bichinho.pose-sentada .bicho-svg { animation: respira 2.4s ease-in-out infinite; }
-@keyframes pulo { 0%, 100% { transform: translateY(0); } 40% { transform: translateY(-34px) rotate(-6deg); } 70% { transform: translateY(0) scaleY(0.92); } }
-@keyframes respira { 0%, 100% { transform: scaleY(1); } 50% { transform: scaleY(1.03); } }
+.bichinho { position: fixed; left: 0; bottom: 4px; z-index: 55; width: 104px; cursor: pointer; will-change: transform; }
+.bicho-vira { transition: transform .22s ease; }
+.bicho-svg { width: 104px; height: 96px; display: block; overflow: visible; filter: drop-shadow(0 5px 6px rgba(0, 0, 0, 0.45)); }
+.bicho-sombra { width: 74px; height: 9px; margin: -8px auto 0; border-radius: 50%; background: rgba(0, 0, 0, 0.38); }
+.bicho-svg .perna { transform-box: fill-box; transform-origin: 50% 10%; }
+.pose-andando .perna-a { animation: passo .46s ease-in-out infinite alternate; }
+.pose-andando .perna-b { animation: passo .46s ease-in-out infinite alternate-reverse; }
+.pose-andando .corpo-todo { animation: balanca .23s ease-in-out infinite alternate; }
+.pose-acenando .corpo-todo, .pose-costas .corpo-todo { animation: respira 2.6s ease-in-out infinite; transform-origin: 50% 100%; transform-box: fill-box; }
+.pose-cochilando .corpo-todo { animation: respira 3.4s ease-in-out infinite; transform-origin: 50% 100%; transform-box: fill-box; }
+.braco-aceno { animation: aceno .5s ease-in-out infinite alternate; }
+.zzz { animation: zzz 2.4s ease-in-out infinite; }
+.pose-pulando .bicho-svg { animation: pulo .9s cubic-bezier(.3,1.6,.5,1); }
+@keyframes passo { from { transform: rotate(-16deg); } to { transform: rotate(16deg); } }
+@keyframes balanca { from { transform: translateY(0); } to { transform: translateY(-2.5px); } }
+@keyframes respira { 0%, 100% { transform: scale(1, 1); } 50% { transform: scale(1.02, 1.035); } }
+@keyframes aceno { from { transform: rotate(-14deg); } to { transform: rotate(18deg); } }
+@keyframes zzz { 0% { opacity: 0; transform: translateY(4px); } 40% { opacity: 1; } 100% { opacity: 0; transform: translateY(-10px); } }
+@keyframes pulo { 0%, 100% { transform: translateY(0); } 35% { transform: translateY(-42px) rotate(-5deg); } 70% { transform: translateY(0) scale(1.06, .9); } }
 
 @media (max-width: 1280px) {
   .kpis-linha { grid-template-columns: 1fr 1fr; }
@@ -260,4 +272,4 @@ input[type='time'].entrada, input[type='date'].entrada { color-scheme: dark; }
   .marca-app { min-width: 0; }
   .usuario-menu { min-width: 0; }
 }
-@media (prefers-reduced-motion: reduce) { .bichinho .bicho-svg { animation: none !important; } }
+@media (prefers-reduced-motion: reduce) { .bichinho *, .bichinho { animation: none !important; } }

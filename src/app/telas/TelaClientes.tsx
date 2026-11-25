@@ -1,9 +1,10 @@
 import { useMemo, useState } from 'react';
+import { createPortal } from 'react-dom';
 import { useApp } from '../estado';
 import { brl, dataBR } from '../lib/formato';
 import { NOME_PAGAMENTO, NOME_SITUACAO, NOME_TIPO, type Cliente, type Documento, type Pagamento, type Situacao, type TipoDoc } from '../tipos';
 import { Escolha, Texto } from '../componentes/Campos';
-import { IconeBusca, IconeLixo, IconeMais, IconePessoa } from '../componentes/Icones';
+import { IconeBusca, IconeFiltro, IconeLixo, IconeMais, IconePessoa, IconeX } from '../componentes/Icones';
 import { normalizar } from '../componentes/Seletores';
 
 type FiltroS = 'todos' | Situacao;
@@ -20,6 +21,7 @@ export function TelaClientes() {
   const [busca, setBusca] = useState('');
   const [fs, setFs] = useState<FiltroS>('todos');
   const [fp, setFp] = useState<FiltroP>('todos');
+  const [janela, setJanela] = useState(false);
 
   const lista = useMemo(() => {
     const b = normalizar(busca.trim());
@@ -40,22 +42,9 @@ export function TelaClientes() {
           <div style={{ color: 'var(--texto-2)', fontSize: 15, marginTop: -6 }}>Quem você atendeu, quem pagou e quem falta pagar.</div>
           <button className="btn forte" onClick={() => novoCliente()}><IconeMais />Novo cliente</button>
           <div className="busca"><IconeBusca /><input className="entrada" placeholder="Nome, razão social, CNPJ, cidade…" value={busca} onChange={(e) => setBusca(e.target.value)} /></div>
-          <div className="filtros">
-            <span className="rotulo">Situação</span>
-            <div className="chips">
-              <Chip on={fs === 'todos'} onClick={() => setFs('todos')}>Todos · {clientes.length}</Chip>
-              {(Object.keys(NOME_SITUACAO) as Situacao[]).map((k) => (
-                <Chip key={k} on={fs === k} onClick={() => setFs(k)} cor={k}>{NOME_SITUACAO[k]} · {conta((x) => x.situacao === k)}</Chip>
-              ))}
-            </div>
-            <span className="rotulo">Pagamento</span>
-            <div className="chips">
-              <Chip on={fp === 'todos'} onClick={() => setFp('todos')}>Todos</Chip>
-              {(Object.keys(NOME_PAGAMENTO) as Pagamento[]).map((k) => (
-                <Chip key={k} on={fp === k} onClick={() => setFp(k)} cor={k}>{NOME_PAGAMENTO[k]} · {conta((x) => x.pagamento === k)}</Chip>
-              ))}
-            </div>
-          </div>
+          <button className={`btn ${fs !== 'todos' || fp !== 'todos' ? 'acento' : ''}`} onClick={() => setJanela(true)}>
+            <IconeFiltro />Filtros{fs !== 'todos' || fp !== 'todos' ? ` · ${(fs !== 'todos' ? 1 : 0) + (fp !== 'todos' ? 1 : 0)} ativo${fs !== 'todos' && fp !== 'todos' ? 's' : ''}` : ''}
+          </button>
         </div>
         <div className="itens">
           {lista.length === 0 && <div className="vazio-lista">{clientes.length ? 'Nenhum cliente com esse filtro.' : 'Nenhum cliente ainda. Clique em "Novo cliente".'}</div>}
@@ -87,12 +76,52 @@ export function TelaClientes() {
         <FichaCliente c={c} documentos={documentosDoCliente(c, documentos)} muda={atualizarCliente}
           excluir={async () => { if (confirm(`Excluir ${c.nome || 'este cliente'}? Os documentos dele continuam salvos.`)) { await excluirCliente(c); avisar('Cliente excluído.'); } }} />
       )}
+      {janela && <JanelaFiltros inicialS={fs} inicialP={fp} conta={conta} total={clientes.length} fechar={() => setJanela(false)}
+        aplicar={(s1, p1) => { setFs(s1); setFp(p1); setJanela(false); }} />}
     </div>
   );
 }
 
-function Chip({ on, onClick, cor, children }: { on: boolean; onClick: () => void; cor?: string; children: React.ReactNode }) {
-  return <button className={`chip-filtro ${on ? 'on' : ''} ${cor ? 'c-' + cor : ''}`} onClick={onClick}>{children}</button>;
+/** Janela de filtros: escolhe e só aplica ao clicar em "Buscar". */
+function JanelaFiltros({ inicialS, inicialP, conta, total, aplicar, fechar }: {
+  inicialS: FiltroS; inicialP: FiltroP; conta: (f: (c: Cliente) => boolean) => number; total: number;
+  aplicar: (s: FiltroS, p: FiltroP) => void; fechar: () => void;
+}) {
+  const [s1, setS1] = useState<FiltroS>(inicialS);
+  const [p1, setP1] = useState<FiltroP>(inicialP);
+  const resultado = conta((c) => (s1 === 'todos' || c.situacao === s1) && (p1 === 'todos' || c.pagamento === p1));
+  return createPortal(
+    <div className="fundo-janela" onClick={fechar}>
+      <div className="janela vidro" onClick={(e) => e.stopPropagation()}>
+        <div className="janela-topo"><h2>Filtros</h2><button className="btn icone-btn" title="Fechar" onClick={fechar}><IconeX /></button></div>
+        <div className="filtros">
+          <span className="rotulo">Situação</span>
+          <div className="chips">
+            <Chip on={s1 === 'todos'} onClick={() => setS1('todos')}>Todos · {total}</Chip>
+            {(Object.keys(NOME_SITUACAO) as Situacao[]).map((k) => (
+              <Chip key={k} on={s1 === k} onClick={() => setS1(k)}>{NOME_SITUACAO[k]} · {conta((x) => x.situacao === k)}</Chip>
+            ))}
+          </div>
+          <span className="rotulo" style={{ marginTop: 10 }}>Pagamento</span>
+          <div className="chips">
+            <Chip on={p1 === 'todos'} onClick={() => setP1('todos')}>Todos</Chip>
+            {(Object.keys(NOME_PAGAMENTO) as Pagamento[]).map((k) => (
+              <Chip key={k} on={p1 === k} onClick={() => setP1(k)}>{NOME_PAGAMENTO[k]} · {conta((x) => x.pagamento === k)}</Chip>
+            ))}
+          </div>
+        </div>
+        <div className="janela-acoes">
+          <button className="btn" onClick={() => { setS1('todos'); setP1('todos'); aplicar('todos', 'todos'); }}>Limpar filtros</button>
+          <button className="btn forte" onClick={() => aplicar(s1, p1)}><IconeBusca />Buscar · {resultado} cliente{resultado === 1 ? '' : 's'}</button>
+        </div>
+      </div>
+    </div>,
+    document.body,
+  );
+}
+
+function Chip({ on, onClick, children }: { on: boolean; onClick: () => void; children: React.ReactNode }) {
+  return <button className={`chip-filtro ${on ? 'on' : ''}`} onClick={onClick}>{children}</button>;
 }
 
 function FichaCliente({ c, documentos, muda, excluir }: { c: Cliente; documentos: Documento[]; muda: (c: Cliente) => void; excluir: () => void }) {

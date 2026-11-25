@@ -21,3 +21,4 @@ export const IconePessoa = () => <svg {...base}><circle cx="12" cy="8" r="4" /><
 export const IconeImportar = () => <svg {...base}><path d="M12 3v12M7 10l5 5 5-5M4 21h16" /></svg>;
 export const IconeLivro = () => <svg {...base}><path d="M4 4h7a3 3 0 0 1 3 3v13a2 2 0 0 0-2-2H4zM20 4h-5a3 3 0 0 0-3 3v13a2 2 0 0 1 2-2h6z" /></svg>;
 export const IconeBusca = () => <svg {...base}><circle cx="11" cy="11" r="7" /><path d="M20 20l-4-4" /></svg>;
+export const IconeFiltro = () => <svg {...base}><path d="M3 5h18l-7 8v6l-4 2v-8z" /></svg>;
