@@ -44,6 +44,7 @@ export function TelaDocumento({ tipo }: { tipo: TipoDoc }) {
       const r = await enviarWhatsApp(d, msg);
       if (r.onde === 'compartilhar' || r.onde === 'cancelado') { /* o próprio celular cuidou do envio */ }
       else if (!noApp) avisar('PDF baixado. Anexe o arquivo na conversa do WhatsApp que abriu.');
+      else if (r.onde === 'celular') avisar('PDF salvo. No WhatsApp, escolha o contato e anexe o PDF (clipe › Documento).');
       else if (r.copiado) avisar(`WhatsApp ${r.onde === 'web' ? 'Web aberto no navegador' : 'aberto'}. Escolha o contato e aperte Ctrl+V para colar o PDF.`);
       else avisar('WhatsApp aberto. Arraste o PDF da pasta que abriu para a conversa.');
     } catch (e: any) { avisar(String(e?.message ?? e), 'erro'); }

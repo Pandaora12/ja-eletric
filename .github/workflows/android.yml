@@ -1,0 +1,57 @@
+name: App Android (APK)
+
+# Gera o APK sempre que este ramo recebe um envio, ou quando alguém clica em "Run workflow".
+on:
+  push:
+    branches: [ccr-fe682316-l4aggd]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  apk:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: 17
+
+      - uses: android-actions/setup-android@v3
+
+      - name: Instalar NDK
+        run: |
+          sdkmanager --install "ndk;27.0.12077973" "platforms;android-34" "build-tools;34.0.0"
+          echo "NDK_HOME=$ANDROID_SDK_ROOT/ndk/27.0.12077973" >> $GITHUB_ENV
+
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: aarch64-linux-android,armv7-linux-androideabi,x86_64-linux-android,i686-linux-android
+
+      - uses: swatinem/rust-cache@v2
+        with:
+          workspaces: src-tauri
+
+      - name: Instalar dependências
+        run: npm ci
+
+      - name: Preparar projeto Android
+        run: npx tauri android init --ci
+
+      - name: Gerar APK
+        run: npx tauri android build --apk --debug
+
+      - name: Guardar APK
+        uses: actions/upload-artifact@v4
+        with:
+          name: J.A-Documentos-Android
+          path: src-tauri/gen/android/app/build/outputs/apk/**/*.apk
+          if-no-files-found: error

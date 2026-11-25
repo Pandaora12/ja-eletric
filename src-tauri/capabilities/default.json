@@ -46,6 +46,12 @@
         },
         {
           "path": "**"
+        },
+        {
+          "path": "$DOCUMENT/**"
+        },
+        {
+          "path": "$DOWNLOAD/**"
         }
       ]
     }
