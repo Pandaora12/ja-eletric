@@ -7,7 +7,7 @@ on:
   workflow_dispatch:
 
 permissions:
-  contents: read
+  contents: write
 
 jobs:
   apk:
@@ -52,7 +52,7 @@ jobs:
         run: npx tauri android init --ci
 
       - name: Gerar APK
-        run: npx tauri android build --apk --debug
+        run: npx tauri android build --apk --debug --target aarch64
 
       - name: Guardar APK
         uses: actions/upload-artifact@v4
@@ -60,3 +60,20 @@ jobs:
           name: J.A-Documentos-Android
           path: src-tauri/gen/android/app/build/outputs/apk/**/*.apk
           if-no-files-found: error
+
+      - name: Preparar arquivo para baixar
+        run: |
+          APK=$(find src-tauri/gen/android/app/build/outputs/apk -name "*.apk" | head -1)
+          cp "$APK" J.A-Documentos.apk
+          ls -la J.A-Documentos.apk
+
+      - name: Publicar em Releases (link para baixar no celular)
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: android-v0.1.${{ github.run_number }}
+          name: J.A Documentos · Android (versão ${{ github.run_number }})
+          body: |
+            Baixe o arquivo **J.A-Documentos.apk** abaixo pelo celular Android e abra para instalar.
+            Se o Android pedir, permita "instalar apps desta fonte".
+          files: J.A-Documentos.apk
+          make_latest: true
