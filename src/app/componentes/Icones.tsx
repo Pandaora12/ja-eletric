@@ -22,3 +22,8 @@ export const IconeImportar = () => <svg {...base}><path d="M12 3v12M7 10l5 5 5-5
 export const IconeLivro = () => <svg {...base}><path d="M4 4h7a3 3 0 0 1 3 3v13a2 2 0 0 0-2-2H4zM20 4h-5a3 3 0 0 0-3 3v13a2 2 0 0 1 2-2h6z" /></svg>;
 export const IconeBusca = () => <svg {...base}><circle cx="11" cy="11" r="7" /><path d="M20 20l-4-4" /></svg>;
 export const IconeFiltro = () => <svg {...base}><path d="M3 5h18l-7 8v6l-4 2v-8z" /></svg>;
+export const IconeCasa = () => <svg {...base}><path d="M3 11l9-7 9 7M5 10v10h14V10" /></svg>;
+export const IconeRecibo = () => <svg {...base}><path d="M6 3h12v18l-3-2-3 2-3-2-3 2zM9 8h6M9 12h6" /></svg>;
+export const IconeCartao = () => <svg {...base}><rect x="3" y="6" width="18" height="13" rx="2" /><path d="M3 10h18M7 15h4" /></svg>;
+export const IconeGrafico = () => <svg {...base}><path d="M4 20V10M10 20V4M16 20v-7M22 20H2" /></svg>;
+export const IconeVoltar = () => <svg {...base}><path d="M15 6l-6 6 6 6" /></svg>;

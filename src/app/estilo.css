@@ -266,10 +266,116 @@ input[type='time'].entrada, input[type='date'].entrada { color-scheme: dark; }
 @media (max-width: 1280px) {
   .kpis-linha { grid-template-columns: 1fr 1fr; }
   .grade-painel { grid-template-columns: 1fr; }
-  .divide { grid-template-columns: 1fr; }
+  .divide { grid-template-columns: minmax(0, 1fr); }
   .tela-doc { grid-template-columns: 280px minmax(0, 1fr); }
   .marca-app small, .nome-u { display: none; }
   .marca-app { min-width: 0; }
   .usuario-menu { min-width: 0; }
 }
 @media (prefers-reduced-motion: reduce) { .bichinho *, .bichinho { animation: none !important; } }
+
+/* ===================== celular e telas pequenas ===================== */
+.so-celular { display: none !important; }
+.aba-icone { display: none; }
+.acoes-doc { display: flex; gap: 10px; align-items: center; flex-wrap: wrap; }
+.alterna { display: flex; gap: 4px; padding: 4px; border-radius: 14px; background: var(--vidro); border: 1px solid var(--borda); backdrop-filter: blur(18px); }
+.alterna button { flex: 1; height: 44px; border: 0; border-radius: 10px; background: none; color: var(--texto-2); font-family: var(--f-rot); font-weight: 700; font-size: 15px; cursor: pointer; }
+.alterna button.on { background: var(--acento); color: var(--acento-tinta); }
+
+@media (max-width: 820px) {
+  html, body { overflow: hidden; }
+  .so-celular { display: flex !important; }
+  .app { height: 100dvh; }
+
+  /* topo compacto: logo à esquerda, relógio no meio, perfil à direita */
+  .topo { padding: calc(8px + env(safe-area-inset-top)) 14px 4px; gap: 10px; }
+  .marca-app { flex-direction: row; min-width: 0; gap: 8px; }
+  .marca-app img { height: 32px; }
+  .marca-app b { font-size: 14px; }
+  .usuario-menu { min-width: 0; margin-left: auto; }
+  .usuario-menu .avatar { width: 36px; height: 36px; }
+  .nome-u { display: none; }
+  .faixa-relogio { justify-content: flex-start; padding: 2px 16px 8px; }
+  .relogio { gap: 10px; }
+  .relogio .horas { font-size: 22px; }
+  .relogio .data { font-size: 14px; }
+  .relogio .mes { font-size: 11px; }
+
+  /* abas viram barra fixa embaixo, com ícone e nome */
+  .abas { position: fixed; left: 0; right: 0; bottom: 0; z-index: 65; margin: 0; max-width: none; border-radius: 20px 20px 0 0; border-width: 1px 0 0; padding: 6px 4px calc(6px + env(safe-area-inset-bottom)); display: grid; grid-template-columns: repeat(7, minmax(0, 1fr)); gap: 0; background: rgba(12, 20, 17, 0.88); }
+  .aba { display: flex; flex-direction: column; align-items: center; gap: 2px; padding: 7px 0 5px; border-radius: 14px; font-size: 10.5px; letter-spacing: 0; }
+  .aba-icone { display: block; }
+  .aba-icone svg { width: 22px; height: 22px; }
+  .aba-nome { max-width: 100%; overflow: hidden; text-overflow: ellipsis; }
+
+  .conteudo { padding: 0 10px calc(84px + env(safe-area-inset-bottom)); }
+  .titulo-tela { font-size: 26px; }
+
+  /* Início em uma coluna */
+  .inicio-painel { padding-bottom: 20px; gap: 12px; }
+  .boas-vindas-painel { flex-direction: column; align-items: stretch; }
+  .atalhos { display: grid; grid-template-columns: 1fr 1fr; }
+  .atalhos .btn { height: 48px; }
+  .kpis-linha { grid-template-columns: 1fr 1fr; gap: 10px; }
+  .kpis-linha .kpi-grande { grid-column: 1 / -1; }
+  .kpi-grande .v { font-size: 26px; }
+  .kpi-mini { padding: 14px; }
+  .kpi-mini .v { font-size: 22px; }
+  .grade-painel { grid-template-columns: 1fr; }
+
+  /* listas e documentos: uma tela de cada vez (lista → detalhe) */
+  .tela-doc { grid-template-columns: minmax(0, 1fr); gap: 10px; }
+  .area-doc, .lista-docs, .editor, .previa { min-width: 0; }
+  .tela-doc.tem-aberto > .lista-docs { display: none; }
+  .tela-doc:not(.tem-aberto) > .vazio-detalhe { display: none !important; }
+  .lista-docs .cab { padding: 16px 14px 10px; }
+  .area-doc { gap: 8px; }
+  .barra-acoes { padding: 10px; gap: 8px; }
+  .barra-acoes .ident { min-width: 0; flex: 1 1 calc(100% - 60px); }
+  .barra-acoes .ident b, .numero-doc input { font-size: 17px; }
+  .numero-doc input { width: 100%; }
+  .barra-acoes .ident span { max-width: 100%; }
+  .acoes-doc { width: 100%; display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr) 50px; }
+  .acoes-doc .btn { padding: 0 8px; }
+  .tela-clientes .acoes-doc { grid-template-columns: repeat(3, minmax(0, 1fr)) 50px; }
+  .tela-clientes .acoes-doc .btn { padding: 0 6px; font-size: 13px; gap: 4px; }
+  .divide { grid-template-columns: minmax(0, 1fr); }
+  .divide.vista-editar > :last-child, .divide.vista-previa > :first-child { display: none; }
+  .editor { padding: 16px 14px 40px; }
+  .grade-2, .grade-3 { grid-template-columns: 1fr; }
+  .linha-item { grid-template-columns: 1fr 1fr !important; }
+  .linha-item > :first-child { grid-column: 1 / -1; }
+  .papel { padding: 10px; }
+  .entrada { font-size: 16px; } /* evita zoom automático no iPhone */
+
+  /* normas */
+  .tela-normas { padding: 14px; }
+  .normas-topo > div:last-child { width: 100%; flex-direction: column; align-items: stretch !important; }
+  .normas-topo .busca { width: 100% !important; }
+  .norma-linha { grid-template-columns: 1fr 50px; }
+  .norma-linha > :nth-child(2) { grid-column: 1; grid-row: 2; }
+  .norma-linha > :nth-child(3) { grid-row: 1 / span 2; grid-column: 2; align-self: center; }
+  .norma-linha.cab { display: none; }
+
+  /* janelas ocupam a largura */
+  .fundo-janela { padding: 10px; align-items: end; }
+  .janela { max-height: 88dvh; border-radius: 20px 20px 14px 14px; }
+  .janela-acoes { flex-direction: column-reverse; }
+  .janela-acoes .btn { width: 100%; }
+  .tela-cheia-topo { padding: calc(10px + env(safe-area-inset-top)) 14px 10px; }
+
+  /* entrada (perfil) */
+  .acesso { padding: 24px 18px; justify-content: flex-start; gap: 20px; }
+  .acesso-relogio { position: static; }
+  .relogio.grande { flex-direction: column; gap: 6px; text-align: center; }
+  .relogio.grande .horas { font-size: 56px; }
+  .relogio.grande .data-bloco { border-left: 0; padding-left: 0; }
+  .relogio.grande .data { font-size: 20px; }
+  .cartao-perfil { margin-top: 10px; padding: 22px; }
+  .acesso-marca { position: static; margin-top: auto; }
+
+  /* mascote e claridade acima da barra de abas */
+  .bichinho { bottom: calc(70px + env(safe-area-inset-bottom)); transform-origin: bottom; zoom: 0.7; }
+  .claridade { bottom: calc(80px + env(safe-area-inset-bottom)); left: 10px; }
+  .aviso-flutuante { bottom: calc(150px + env(safe-area-inset-bottom)); width: calc(100% - 24px); }
+}

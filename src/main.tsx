@@ -7,3 +7,8 @@ ReactDOM.createRoot(document.getElementById("root") as HTMLElement).render(
     <App />
   </React.StrictMode>,
 );
+
+// no celular (navegador), registra o modo offline / "instalar na tela inicial"
+if ('serviceWorker' in navigator && !('__TAURI_INTERNALS__' in window) && location.protocol === 'https:') {
+  window.addEventListener('load', () => { navigator.serviceWorker.register('/sw.js').catch(() => {}); });
+}

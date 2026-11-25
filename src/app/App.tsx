@@ -10,7 +10,9 @@ import { Painel } from './componentes/Painel';
 import { Paisagem } from './componentes/Paisagem';
 import { Relogio } from './componentes/Relogio';
 import { Bichinho } from './componentes/Bichinho';
-import { IconeSol } from './componentes/Icones';
+import { IconeCartao, IconeCasa, IconeForm, IconeGrafico, IconeLivro, IconePessoa, IconeRecibo, IconeSol } from './componentes/Icones';
+
+const ICONE_ABA: Record<string, () => React.ReactElement> = { inicio: IconeCasa, clientes: IconePessoa, orcamento: IconeForm, recibo: IconeRecibo, comprovante: IconeCartao, relatorio: IconeGrafico, normas: IconeLivro };
 import './estilo.css';
 
 export default function App() {
@@ -35,7 +37,8 @@ export default function App() {
             {ABAS.map((a) => (
               <button key={a.id} className={`aba ${aba === a.id ? 'ativa' : ''}`} onClick={() => irPara(a.id)}>
                 {aba === a.id && <motion.span layoutId="pilula" className="pilula" transition={{ type: 'spring', stiffness: 380, damping: 32 }} />}
-                {a.nome}
+                <span className="aba-icone">{(() => { const I = ICONE_ABA[a.id]; return <I />; })()}</span>
+                <span className="aba-nome">{a.nome}</span>
               </button>
             ))}
           </nav>

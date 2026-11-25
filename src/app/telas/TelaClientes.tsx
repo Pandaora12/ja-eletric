@@ -4,7 +4,7 @@ import { useApp } from '../estado';
 import { brl, dataBR } from '../lib/formato';
 import { NOME_PAGAMENTO, NOME_SITUACAO, NOME_TIPO, type Cliente, type Documento, type Pagamento, type Situacao, type TipoDoc } from '../tipos';
 import { Escolha, Texto } from '../componentes/Campos';
-import { IconeBusca, IconeFiltro, IconeLixo, IconeMais, IconePessoa, IconeX } from '../componentes/Icones';
+import { IconeBusca, IconeFiltro, IconeLixo, IconeMais, IconePessoa, IconeVoltar, IconeX } from '../componentes/Icones';
 import { normalizar } from '../componentes/Seletores';
 
 type FiltroS = 'todos' | Situacao;
@@ -35,7 +35,7 @@ export function TelaClientes() {
   const c = clientes.find((x) => x.id === clienteAberto) ?? null;
 
   return (
-    <div className="tela-doc tela-clientes">
+    <div className={`tela-doc tela-clientes ${c ? 'tem-aberto' : ''}`}>
       <section className="lista-docs vidro">
         <div className="cab">
           <h1 className="titulo-tela" style={{ fontSize: 23 }}>Cli<em>entes</em></h1>
@@ -62,7 +62,7 @@ export function TelaClientes() {
       </section>
 
       {!c ? (
-        <section className="vidro" style={{ display: 'flex' }}>
+        <section className="vidro vazio-detalhe" style={{ display: 'flex' }}>
           <div className="vazio-doc">
             <div className="icone-grande"><IconePessoa /></div>
             <h2 className="titulo-tela" style={{ fontSize: 30 }}>Seus clientes</h2>
@@ -125,7 +125,8 @@ function Chip({ on, onClick, children }: { on: boolean; onClick: () => void; chi
 }
 
 function FichaCliente({ c, documentos, muda, excluir }: { c: Cliente; documentos: Documento[]; muda: (c: Cliente) => void; excluir: () => void }) {
-  const { criar, abrir } = useApp();
+  const { criar, abrir, abrirCliente } = useApp();
+  const [vista, setVista] = useState<'editar' | 'previa'>('editar');
   const s = <K extends keyof Cliente>(k: K) => (v: Cliente[K]) => muda({ ...c, [k]: v });
   const total = documentos.filter((d) => d.tipo === 'recibo').reduce((a, d) => a + (d.valor || 0), 0);
 
@@ -143,16 +144,23 @@ function FichaCliente({ c, documentos, muda, excluir }: { c: Cliente; documentos
   return (
     <section className="area-doc">
       <div className="barra-acoes vidro">
+        <button className="btn icone-btn so-celular" title="Voltar para a lista" onClick={() => abrirCliente(null)}><IconeVoltar /></button>
         <div className="ident">
           <b>{c.nome || 'Novo cliente'}</b>
           <span>{documentos.length} documento{documentos.length === 1 ? '' : 's'}{total ? ` · recebido ${brl(total)}` : ''}</span>
         </div>
+        <div className="acoes-doc">
         <button className="btn pequeno" onClick={() => novo('orcamento')}><IconeMais />Orçamento</button>
         <button className="btn pequeno" onClick={() => novo('recibo')}><IconeMais />Recibo</button>
         <button className="btn pequeno" onClick={() => novo('comprovante')}><IconeMais />Pagamento</button>
         <button className="btn icone-btn perigo" title="Excluir cliente" onClick={excluir}><IconeLixo /></button>
+        </div>
       </div>
-      <div className="divide">
+      <div className="alterna so-celular">
+        <button className={vista === 'editar' ? 'on' : ''} onClick={() => setVista('editar')}>Dados</button>
+        <button className={vista === 'previa' ? 'on' : ''} onClick={() => setVista('previa')}>Documentos · {documentos.length}</button>
+      </div>
+      <div className={`divide vista-${vista}`}>
         <div className="editor vidro">
           <div className="bloco-form">
             <h3>Situação</h3>

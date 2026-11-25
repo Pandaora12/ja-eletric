@@ -54,7 +54,7 @@ export function Acesso() {
           <label className="campo" style={{ width: '100%' }}><span>Seu nome</span><input className="entrada" autoFocus value={nome} onChange={(e) => setNome(e.target.value)} placeholder="Ex.: Jorge Luiz dos Santos" /></label>
           <button className="btn forte grande">{perfil ? 'Salvar' : 'Criar perfil'}</button>
           {perfil && <button type="button" className="btn pequeno" onClick={() => setEditando(false)}>Cancelar</button>}
-          <p className="nota">Tudo fica salvo só neste computador. Não precisa de internet.</p>
+          <p className="nota">Tudo fica salvo só neste aparelho. Não precisa de internet.</p>
         </motion.form>
       ) : perfil && (
         <motion.div className="cartao-perfil" initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }}>

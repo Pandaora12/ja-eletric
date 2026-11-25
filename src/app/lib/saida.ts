@@ -41,8 +41,16 @@ export async function baixarPdf(doc: Documento, aoGerar?: () => void): Promise<s
 export async function enviarWhatsApp(doc: Documento, mensagem: string): Promise<{ onde: string; copiado: boolean; caminho?: string }> {
   const bytes = await gerarPdfBytes(doc);
   if (!noApp) {
+    // celular: abre o "compartilhar" do telefone já com o PDF anexado (escolhe WhatsApp e o contato)
+    const arquivo = new File([bytes as BlobPart], nomeArquivo(doc) + '.pdf', { type: 'application/pdf' });
+    const nav = navigator as Navigator & { canShare?: (d: ShareData) => boolean };
+    if (nav.share && nav.canShare?.({ files: [arquivo] })) {
+      try { await nav.share({ files: [arquivo], text: mensagem }); return { onde: 'compartilhar', copiado: true }; }
+      catch (e: any) { if (e?.name === 'AbortError') return { onde: 'cancelado', copiado: true }; }
+    }
     baixarNoNavegador(bytes, nomeArquivo(doc) + '.pdf');
-    window.open(`https://web.whatsapp.com/send?text=${encodeURIComponent(mensagem)}`, '_blank');
+    const celular = /Android|iPhone|iPad/i.test(navigator.userAgent);
+    window.open(celular ? `https://wa.me/?text=${encodeURIComponent(mensagem)}` : `https://web.whatsapp.com/send?text=${encodeURIComponent(mensagem)}`, '_blank');
     return { onde: 'web', copiado: false };
   }
   const caminho = await invocar<string>('gravar_documento', { nome: nomeArquivo(doc), bytes: Array.from(bytes) });
