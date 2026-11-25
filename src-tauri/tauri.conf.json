@@ -1,8 +1,8 @@
 {
   "$schema": "https://schema.tauri.app/config/2",
-  "productName": "ja-eletric",
+  "productName": "J.A Documentos",
   "version": "0.1.0",
-  "identifier": "com.user.ja-eletric",
+  "identifier": "br.com.jaeletricidades.documentos",
   "build": {
     "beforeDevCommand": "npm run dev",
     "devUrl": "http://localhost:1420",
@@ -12,9 +12,12 @@
   "app": {
     "windows": [
       {
-        "title": "ja-eletric",
-        "width": 800,
-        "height": 600
+        "title": "J.A Documentos",
+        "width": 1360,
+        "height": 860,
+        "minWidth": 1100,
+        "minHeight": 700,
+        "center": true
       }
     ],
     "security": {
@@ -30,6 +33,10 @@
       "icons/128x128@2x.png",
       "icons/icon.icns",
       "icons/icon.ico"
-    ]
+    ],
+    "resources": {
+      "../public/modelos/": "modelos/"
+    },
+    "shortDescription": "Orçamentos, recibos e comprovantes da J.A Eletricidades"
   }
 }

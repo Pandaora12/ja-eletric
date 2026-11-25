@@ -1,7 +1,10 @@
-# Tauri + React + Typescript
+# J.A Documentos
 
-This template should help get you started developing with Tauri, React and Typescript in Vite.
+App de computador da **J.A Eletricidades** para montar orçamentos, recibos e comprovantes Pix no padrão da empresa:
+chat por voz ou texto com IA, formulários, prévia igual ao PDF, **Baixar PDF** e **Enviar no WhatsApp**.
 
-## Recommended IDE Setup
+- Telas: Início (chat + painéis), Orçamento, Relatório, Recibos, Comprovante
+- Login e cadastro (Supabase), com modo local quando o Supabase não está configurado
+- Feito em Tauri 2 + React, preparado para virar app de Android/iPhone depois
 
-- [VS Code](https://code.visualstudio.com/) + [Tauri](https://marketplace.visualstudio.com/items?itemName=tauri-apps.tauri-vscode) + [rust-analyzer](https://marketplace.visualstudio.com/items?itemName=rust-lang.rust-analyzer)
+Como configurar, rodar e gerar o instalador: **[docs/CONFIGURAR.md](docs/CONFIGURAR.md)**.

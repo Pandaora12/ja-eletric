@@ -1,0 +1,73 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<title>Pagamento via Pix · J.A Eletricidades</title>
+<link rel="stylesheet" href="fonts.css">
+<link rel="stylesheet" href="base.css">
+<style>
+:root{--logo-verde:#0E6B38;--logo-verm:#D3121B}
+.page{padding:0}
+.band{height:44mm;display:flex;align-items:center;justify-content:space-between;padding:0 14mm;border-bottom:1.2mm solid var(--logo-verm)}
+.band .marca{display:flex;align-items:center;gap:4mm}
+.band .marca img{height:30mm}
+.ja-nm{font-family:"Saira",sans-serif;line-height:1}
+.ja-nm b{display:block;font-weight:900;font-size:26pt;letter-spacing:-.01em;color:var(--logo-verde);margin-bottom:.6mm}
+.ja-nm i{display:block;font-style:normal;font-weight:800;font-size:12.5pt;letter-spacing:.06em;color:var(--logo-verm)}
+.ja-nm small{display:block;font-family:var(--f-rot);font-size:6.6pt;letter-spacing:.16em;color:var(--tinta-2);margin-top:1.6mm;text-transform:uppercase}
+.band .doc{text-align:right;font-family:var(--f-rot);font-size:7pt;letter-spacing:.14em;text-transform:uppercase;color:var(--tinta-2)}
+.band .doc b{display:block;font-family:var(--f-display);font-weight:400;font-size:11pt;color:var(--tinta);letter-spacing:.04em;margin-top:1mm}
+.wrap{padding:14mm 14mm 0}
+.k{font-family:var(--f-rot);font-size:7.6pt;letter-spacing:.2em;text-transform:uppercase;color:var(--logo-verde);display:flex;align-items:center;gap:2mm}
+.k::before{content:"";width:5mm;height:1.4mm;background:var(--limao);outline:.2mm solid var(--selva)}
+h1{font-family:var(--f-display);font-weight:400;font-size:26pt;letter-spacing:.03em;margin-top:3mm;line-height:1.1;text-transform:uppercase}
+.intro{margin-top:4mm;font-size:10pt;line-height:1.6;color:var(--tinta-2);max-width:150mm}
+.chave{margin-top:11mm;border:.8mm solid #C8F53B;border-radius:3mm;background:var(--branco);padding:9mm 10mm;display:grid;grid-template-columns:auto 1fr;gap:8mm;align-items:center}
+.chave svg{width:24mm;height:24mm}
+.chave .lbl{font-size:7.4pt}
+.chave .key{font-family:var(--f-rot);font-weight:800;font-size:34pt;letter-spacing:.01em;margin-top:2mm;line-height:1}
+.chave .s{font-size:8.6pt;color:var(--tinta-2);margin-top:3mm}
+.dados{margin-top:7mm;display:grid;grid-template-columns:1fr 1fr 1fr;border:.3mm solid var(--tinta);border-radius:2mm;background:var(--branco)}
+.dados > div{padding:6mm 6mm}
+.dados > div + div{border-left:.2mm solid var(--linha)}
+.dados .v{font-family:var(--f-rot);font-weight:700;font-size:13pt;margin-top:1.6mm;line-height:1.25}
+.passos{margin-top:11mm}
+.passos .lst{display:grid;grid-template-columns:repeat(3,1fr);gap:4mm;margin-top:3mm}
+.passos .lst > div{background:var(--branco);border:.2mm solid var(--linha);border-radius:2mm;padding:4.5mm;display:grid;grid-template-columns:9mm 1fr;gap:2mm;align-items:start}
+.passos b{font-family:var(--f-rot);font-weight:800;font-size:13pt;color:var(--logo-verde);line-height:1}
+.passos span{font-size:8.4pt;line-height:1.45}
+.aviso{margin-top:9mm;display:grid;grid-template-columns:9mm 1fr;gap:3mm;align-items:center;border-left:1.2mm solid var(--selva);background:var(--branco);padding:4mm 5mm;font-size:8.6pt;line-height:1.5}
+.aviso svg{width:9mm;height:9mm}
+.ftr.ftr-min{flex-direction:row;justify-content:center;align-items:center;gap:3mm;height:14mm;font-size:10pt;letter-spacing:.06em;color:var(--tinta);text-transform:none}
+.ftr.ftr-min svg{width:5mm;height:5mm}
+.ftr.ftr-min b{font-family:var(--f-rot);font-weight:700}
+
+.cobra{margin-top:8mm;display:grid;grid-template-columns:78mm 1fr;border-radius:3mm;overflow:hidden;border:.3mm solid var(--grafite)}
+.cobra .cv{background:var(--grafite);color:#E9EDE4;padding:6mm}
+.cobra .cv .lbl{color:var(--limao)}
+.cobra .cv .v{font-family:var(--f-display);font-size:22pt;color:var(--limao);margin:2.5mm 0 1.5mm;white-space:nowrap}
+.cobra .cv .ext{font-size:8pt;color:#A7B0A8;line-height:1.4}
+.cobra .cd{background:var(--branco);padding:5mm 6mm;display:flex;flex-direction:column;gap:3mm;justify-content:center}
+.cobra .cd .t{font-size:9.4pt;font-weight:600;margin-top:.8mm;line-height:1.4}
+.cobra .its > div{display:flex;justify-content:space-between;gap:4mm;font-size:8.4pt;padding:1.4mm 0;border-bottom:.2mm solid var(--linha)}
+.cobra .its > div:last-child{border:0}
+.cobra .its b{font-family:var(--f-rot);font-weight:700;white-space:nowrap}
+.com-valor .wrap{padding-top:10mm}
+.com-valor h1{font-size:22pt}
+.com-valor .chave{margin-top:6mm;padding:6mm 8mm}
+.com-valor .chave svg{width:18mm;height:18mm}
+.com-valor .chave .key{font-size:28pt}
+.com-valor .dados{margin-top:5mm}
+.com-valor .dados > div{padding:4.5mm 6mm}
+.com-valor .passos{margin-top:7mm}
+.com-valor .aviso{margin-top:6mm}
+</style>
+</head>
+<body>
+<div id="doc"></div>
+<script src="core.js"></script>
+<script src="ponte.js"></script>
+<script src="dados.js"></script>
+<script src="pix.js"></script>
+</body>
+</html>

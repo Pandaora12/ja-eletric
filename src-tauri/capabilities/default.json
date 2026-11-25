@@ -2,10 +2,28 @@
   "$schema": "../gen/schemas/desktop-schema.json",
   "identifier": "default",
   "description": "Capability for the main window",
-  "windows": ["main"],
+  "windows": [
+    "main"
+  ],
   "permissions": [
     "core:default",
     "opener:default",
+    {
+      "identifier": "opener:allow-open-url",
+      "allow": [
+        {
+          "url": "whatsapp:*"
+        },
+        {
+          "url": "https://wa.me/*"
+        },
+        {
+          "url": "https://web.whatsapp.com/*"
+        }
+      ]
+    },
+    "opener:allow-reveal-item-in-dir",
+    "opener:allow-open-path",
     "fs:allow-exists",
     "fs:allow-mkdir",
     "fs:allow-read-text-file",
@@ -17,10 +35,18 @@
     {
       "identifier": "fs:scope",
       "allow": [
-        { "path": "$APPDATA" },
-        { "path": "$APPDATA/**" },
-        { "path": "$HOME/**" },
-        { "path": "**" }
+        {
+          "path": "$APPDATA"
+        },
+        {
+          "path": "$APPDATA/**"
+        },
+        {
+          "path": "$HOME/**"
+        },
+        {
+          "path": "**"
+        }
       ]
     }
   ]

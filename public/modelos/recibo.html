@@ -1,0 +1,80 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<title>Recibo · J.A Eletricidades</title>
+<link rel="stylesheet" href="fonts.css">
+<link rel="stylesheet" href="base.css">
+<style>
+:root{--logo-verde:#0E6B38;--logo-verm:#D3121B}
+.page{padding:0}
+.band{height:44mm;display:flex;align-items:center;justify-content:space-between;padding:0 14mm;border-bottom:1.2mm solid var(--logo-verm)}
+.band .marca{display:flex;align-items:center;gap:4mm}
+.band .marca img{height:30mm}
+.ja-nm{font-family:"Saira",sans-serif;line-height:1}
+.ja-nm b{display:block;font-weight:900;font-size:26pt;letter-spacing:-.01em;color:var(--logo-verde);margin-bottom:.6mm}
+.ja-nm i{display:block;font-style:normal;font-weight:800;font-size:12.5pt;letter-spacing:.06em;color:var(--logo-verm)}
+.ja-nm small{display:block;font-family:var(--f-rot);font-size:6.6pt;letter-spacing:.16em;color:var(--tinta-2);margin-top:1.6mm;text-transform:uppercase}
+.band .doc{text-align:right;font-family:var(--f-rot);font-size:7pt;letter-spacing:.14em;text-transform:uppercase;color:var(--tinta-2)}
+.band .doc b{display:block;font-family:var(--f-display);font-weight:400;font-size:11pt;color:var(--tinta);letter-spacing:.04em;margin-top:1mm}
+.band .doc strong{display:block;margin-top:1.2mm;font-weight:700;color:var(--tinta)}
+.wrap{padding:8mm 14mm 0}
+.hero{display:grid;grid-template-columns:1fr 84mm;gap:6mm;align-items:stretch}
+.hero .k{font-family:var(--f-rot);font-size:7.6pt;letter-spacing:.2em;text-transform:uppercase;color:var(--logo-verde);display:flex;align-items:center;gap:2mm}
+.hero .k::before{content:"";width:5mm;height:1.4mm;background:var(--limao);outline:.2mm solid var(--selva)}
+.hero h1{font-family:var(--f-display);font-weight:400;font-size:30pt;letter-spacing:.04em;margin-top:2.5mm;line-height:1}
+.hero p{margin-top:4mm;font-size:9.6pt;line-height:1.6;color:var(--tinta)}
+.valor{background:var(--grafite);color:#E9EDE4;border-radius:2mm;padding:5.5mm 6mm;display:flex;flex-direction:column;justify-content:space-between}
+.valor .lbl{color:#949D95}
+.valor .v{font-family:var(--f-display);font-size:24pt;color:var(--limao);margin:2.5mm 0 1.5mm}
+.valor .ext{font-size:8pt;color:#A7B0A8;line-height:1.45}
+.boxes{display:grid;grid-template-columns:1.35fr 1fr;gap:5mm;margin-top:6mm}
+.box{border:.3mm solid var(--tinta);border-radius:2mm;padding:0 4mm;background:var(--branco)}
+.box > div{padding:2.6mm 0;border-bottom:.2mm solid var(--linha)}
+.box > div:last-child{border-bottom:0}
+.box .v{font-weight:600;font-size:8.6pt;margin-top:.6mm;line-height:1.4}
+.box .v small{display:block;font-weight:400;color:var(--tinta-2);font-size:7.4pt}
+table.rec{width:100%;border-collapse:collapse;margin-top:5mm;font-size:8.6pt}
+table.rec th{font-family:var(--f-rot);font-weight:600;font-size:6.4pt;letter-spacing:.12em;text-transform:uppercase;color:var(--tinta-2);text-align:left;padding:2mm 2mm;border-bottom:.3mm solid var(--tinta)}
+table.rec th.r,table.rec td.r{text-align:right}
+table.rec td{padding:3mm 2mm;border-bottom:.2mm solid var(--linha);vertical-align:middle}
+table.rec td.n{font-family:var(--f-rot);color:var(--tinta-3);width:10mm}
+table.rec td small{display:block;color:var(--tinta-2);font-size:7.2pt;margin-top:.4mm}
+table.rec td.val{font-family:var(--f-rot);font-weight:700;font-size:10pt;width:34mm}
+table.rec tfoot td{border-bottom:0;padding-top:3.5mm}
+table.rec tfoot .tot-l{font-family:var(--f-rot);font-weight:600;font-size:7pt;letter-spacing:.14em;text-transform:uppercase;text-align:right;background:var(--papel-2)}
+table.rec tfoot .tv{font-family:var(--f-display);font-size:13pt;white-space:nowrap;text-align:right;background:var(--papel-2)}
+.tp{font-family:var(--f-rot);font-weight:600;font-size:6pt;letter-spacing:.08em;text-transform:uppercase;padding:.3mm 1.6mm;display:inline-block;border:.25mm solid var(--tinta);white-space:nowrap}
+.tp.mo{background:var(--limao);border-color:var(--selva)}
+.tp.mt{background:var(--selva);color:#E9EDE4;border-color:var(--selva)}
+.pix{margin-top:6mm;border:.8mm solid #C8F53B;border-radius:2mm;background:var(--branco);display:grid;grid-template-columns:auto 1fr 1fr 1.25fr;align-items:center}
+.pix > div{padding:4mm 4.5mm}
+.pix > div + div{border-left:.2mm solid var(--linha)}
+.pix .ic{display:flex;align-items:center;gap:2.5mm;font-family:var(--f-rot);font-weight:700;font-size:9pt;letter-spacing:.1em}
+.pix .ic svg{width:9mm;height:9mm}
+.pix .v{font-family:var(--f-rot);font-weight:700;font-size:10.5pt;margin-top:1mm}
+.pix .v.key{font-size:14pt;letter-spacing:.02em}
+.assina{display:grid;grid-template-columns:1fr 1fr;gap:6mm;margin-top:3mm;align-items:end}
+.assina .local{font-size:9pt;line-height:1.6}
+.assina .local b{font-family:var(--f-rot);letter-spacing:.06em}
+.assina .sigbox{position:relative;height:36mm;display:flex;flex-direction:column;justify-content:flex-end}
+.assina .rubrica{position:absolute;left:22mm;bottom:14mm;height:26mm}
+.assina .line{border-top:.25mm solid var(--tinta);padding-top:1.6mm;font-size:8pt;line-height:1.45}
+.assina .line b{font-family:var(--f-rot);font-weight:700;letter-spacing:.06em;text-transform:uppercase;font-size:8.4pt}
+.assina .line small{display:block;color:var(--tinta-2);font-size:6.8pt}
+.ftr{height:14mm;flex-direction:column;align-items:stretch;justify-content:center;gap:.8mm;text-transform:none;letter-spacing:.02em;font-size:6.4pt}
+.ftr .l1{display:flex;justify-content:space-between}
+.ftr .l1 b{font-weight:600;color:var(--tinta);letter-spacing:.08em;text-transform:uppercase}
+.ftr .l2{color:var(--tinta-3)}
+.ftr.ftr-min{flex-direction:row;justify-content:center;align-items:center;gap:8mm;height:11mm;font-size:8pt;letter-spacing:.06em;color:var(--tinta)}
+.ftr.ftr-min span + span{padding-left:8mm;border-left:.2mm solid var(--linha)}
+</style>
+</head>
+<body>
+<div id="doc"></div>
+<script src="core.js"></script>
+<script src="ponte.js"></script>
+<script src="dados.js"></script>
+<script src="recibo.js"></script>
+</body>
+</html>
